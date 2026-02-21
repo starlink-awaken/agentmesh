@@ -105,7 +105,7 @@ export class Metrics {
 
       summary[name] = {
         count: history.length,
-        last: values[values.length - 1],
+        last: values[values.length - 1] ?? 0,
         avg: sum / values.length
       };
     }
