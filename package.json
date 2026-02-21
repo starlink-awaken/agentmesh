@@ -1,6 +1,6 @@
 {
   "name": "@starlink-awaken/agentmesh",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Unified Agent Gateway - Multi-Agent Scheduler and Router",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
