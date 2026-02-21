@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Development
+.vscode/
+.idea/
+*.log
+
+# Build output
+dist/
+build/
+
+# Test
+coverage/
+*.test.ts
+*.spec.ts
+__tests__/
+
+# Docs
+docs/
+*.md
+
+# Config
+tsconfig.json
+bun.lockb
+
+# Git
+.git/
+.gitignore
+
+# Misc
+.DS_Store
+*.swp
+*.swo

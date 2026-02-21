@@ -1,0 +1,190 @@
+port: 3000
+wsPort: 3001
+host: "0.0.0.0"
+dataDir: "./data"
+logDir: "./logs"
+
+routing:
+  defaultAgent: "claude-code"
+
+  rules:
+    # Claude Code - 通用代码任务
+    - name: code-generation
+      keywords:
+        - write code
+        - generate code
+        - create function
+        - create class
+        - 写代码
+        - 生成代码
+      agent: claude-code
+      priority: 10
+
+    - name: code-review
+      keywords:
+        - review
+        - code review
+        - pr review
+        - review code
+        - 代码审查
+        - review code
+      agent: claude-code
+      priority: 15
+
+    - name: debugging
+      keywords:
+        - debug
+        - fix bug
+        - error
+        - bug
+        - 调试
+        - 修复错误
+      agent: claude-code
+      priority: 15
+
+    - name: refactoring
+      keywords:
+        - refactor
+        - 重构
+        - improve code
+      agent: claude-code
+      priority: 10
+
+    - name: documentation
+      keywords:
+        - docs
+        - document
+        - 文档
+        - write docs
+      agent: claude-code
+      priority: 10
+
+    # OpenClaw - 浏览器自动化
+    - name: browser-automation
+      keywords:
+        - browser
+        - scrape
+        - click
+        - screenshot
+        - web automation
+        - 浏览器
+        - 爬虫
+        - 截图
+      agent: openclaw
+      priority: 15
+
+    - name: web-scraping
+      keywords:
+        - scrap
+        - crawl
+        - extract data
+        - 抓取
+        - 采集
+      agent: openclaw
+      priority: 15
+
+    # Cursor - AI 编程
+    - name: cursor-task
+      keywords:
+        - cursor
+        - cursor task
+      agent: cursor
+      priority: 12
+
+    # Windsurf - Flow 状态编程
+    - name: windsurf-task
+      keywords:
+        - windsurf
+        - flow state
+      agent: windsurf
+      priority: 12
+
+    # Qwen Code - 中文编程
+    - name: qwen-task
+      keywords:
+        - qwen
+        - 通义千问
+      agent: qwen-code
+      priority: 12
+
+    # Gemini - 多模态
+    - name: gemini-task
+      keywords:
+        - gemini
+        - multimodal
+        - 多模态
+      agent: gemini
+      priority: 12
+
+    # Droid - Android 开发
+    - name: android-development
+      keywords:
+        - android
+        - apk
+        - mobile
+        - 安卓
+        - 手机应用
+      agent: droid
+      priority: 15
+
+    # Aider - Git 集成编辑
+    - name: aider-task
+      keywords:
+        - aider
+        - git edit
+        - refactor git
+      agent: aider
+      priority: 12
+
+    # Cline - 自主编程
+    - name: cline-task
+      keywords:
+        - cline
+        - autonomous
+      agent: cline
+      priority: 12
+
+    # Roo Code
+    - name: roo-code-task
+      keywords:
+        - roo-code
+        - roo
+      agent: roo-code
+      priority: 12
+
+    # 多 Agent 协作
+    - name: multi-agent
+      keywords:
+        - collaborate
+        - team
+        - together
+        - multiple agents
+        - 协作
+        - 多个
+      strategy: broadcast
+      agents:
+        - claude-code
+        - openclaw
+      priority: 20
+
+agents:
+  # 内置 Agent（在代码中注册）
+  - id: claude-code
+    name: Claude Code
+    type: claude-code
+    capabilities:
+      - code-generation
+      - code-review
+      - debugging
+      - refactoring
+      - documentation
+      - file-operations
+
+  - id: openclaw
+    name: OpenClaw
+    type: openclaw
+    capabilities:
+      - browser-automation
+      - web-scraping
+      - form-filling
+      - ui-testing

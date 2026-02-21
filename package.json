@@ -1,0 +1,74 @@
+{
+  "name": "@starlink-awaken/agentmesh",
+  "version": "1.0.0",
+  "description": "Unified Agent Gateway - Multi-Agent Scheduler and Router",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "private": false,
+  "bin": {
+    "agentmesh": "./src/cli.ts"
+  },
+  "files": [
+    "src",
+    "config",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run src/index.ts",
+    "cli": "bun run src/cli.ts",
+    "build": "tsc",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/uuid": "^11.0.0",
+    "@types/ws": "^8.18.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/websocket": "^11.2.0",
+    "chromadb": "^3.3.1",
+    "execa": "^9.6.1",
+    "fastify": "^5.7.4",
+    "pino": "^10.3.1",
+    "uuid": "^13.0.0",
+    "ws": "^8.19.0",
+    "yaml": "^2.8.2"
+  },
+  "keywords": [
+    "agent",
+    "gateway",
+    "multi-agent",
+    "scheduler",
+    "router",
+    "orchestrator",
+    "claude",
+    "openclaw",
+    "ai",
+    "llm",
+    "automation"
+  ],
+  "author": "Starlink Awaken Team <team@starlink-awaken.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/starlink-awaken/agentmesh.git"
+  },
+  "bugs": {
+    "url": "https://github.com/starlink-awaken/agentmesh/issues"
+  },
+  "homepage": "https://github.com/starlink-awaken/agentmesh#readme"
+}
