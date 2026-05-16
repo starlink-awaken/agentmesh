@@ -8,7 +8,7 @@ import { resolve, dirname, join } from 'node:path';
 import { initLogger } from './core/logger.js';
 
 const PROJECT_ROOT = resolve(dirname(import.meta.dir), '..');
-const VERSION = '1.2.9';
+const VERSION = '1.3.0';
 const BANNER = `
    █████╗  ██████╗ ███████╗███╗   ██╗████████╗
   ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
@@ -260,6 +260,40 @@ async function cmdConfig(args: string[]) {
   }
 }
 
+async function cmdStatus() {
+  try {
+    const [health, models, stats] = await Promise.all([
+      apiRequest<any>('/health'),
+      apiRequest<any>('/v1/models').catch(() => ({ data: [] })),
+      apiRequest<any>('/model-gateway/stats').catch(() => null),
+    ]);
+    console.log(`
+╔═══════════════════════════════════════════════════╗
+║     Agent Mesh Gateway Status                    ║
+╠═══════════════════════════════════════════════════╣
+║  Status:    ${health.status}                                      ║
+║  Agents:    ${String(health.agents?.length || 0).padStart(2)} online                               ║
+║  Models:    ${String(models.data?.length || 0).padStart(2)} available                            ║
+║  Uptime:    ${stats?.uptime_seconds ? Math.floor(stats.uptime_seconds) + 's' : 'N/A'}                                   ║
+╠═══════════════════════════════════════════════════╣`);
+    if (stats?.providers) {
+      console.log('║  Provider Metrics:                              ║');
+      for (const [name, m] of Object.entries<any>(stats.providers)) {
+        console.log(`║  ${name.padEnd(12)} reqs:${String(m.requests).padStart(5)}  ok:${(m.success_rate||'N/A').padStart(6)}  avg:${String(m.avg_latency_ms||0).padStart(4)}ms     ║`);
+      }
+    }
+    if (stats?.recent?.length) {
+      console.log('╠═══════════════════════════════════════════════════╣');
+      console.log('║  Recent:                                        ║');
+      for (const r of stats.recent.slice(0, 5)) {
+        const time = new Date(r.time).toLocaleTimeString();
+        console.log(`║  ${r.status >= 400 ? '❌' : '✅'} ${time} ${r.model} → ${r.actual}  ${r.latency_ms}ms              ║`);
+      }
+    }
+    console.log('╚═══════════════════════════════════════════════════╝\n');
+  } catch { console.error('\n  ❌ Gateway not reachable. Start: agentmesh start\n'); }
+}
+
 async function cmdDoctor() {
   console.log('\n  🔍 Agent Mesh Gateway Diagnostics\n');
   const checks: Array<[string, boolean, string]> = [];
@@ -334,8 +368,10 @@ async function main() {
       case 'setup': case 'init':
         const { runSetup } = await import('./cli/setup.js');
         await runSetup(); break;
-      case 'health': case 'status':
+      case 'health':
         await cmdHealth(); break;
+      case 'status': case 'info':
+        await cmdStatus(); break;
       case 'models': case 'model':
         await cmdModels(); break;
       case 'quota':
