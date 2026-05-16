@@ -61,7 +61,11 @@ export function loadConfig(configPath?: string): GatewayConfig {
   }
 
   const pkgDir = (() => {
-    try { return dirname(dirname((import.meta as any).dir || (import.meta as any).dirname || '')); } catch { return ''; }
+    try {
+      let d = (import.meta as any).dir || (import.meta as any).dirname || '';
+      for (let i = 0; i < 4; i++) d = dirname(d); // 上溯到包根
+      return d;
+    } catch { return ''; }
   })();
 
   const paths = configPath
