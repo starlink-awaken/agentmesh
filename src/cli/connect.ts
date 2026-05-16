@@ -111,9 +111,11 @@ const codexDesktopAdapter: ToolAdapter = {
   },
   generateConfig(gwUrl: string) {
     const path = this.getConfigPath()!;
+    const catalogPath = join(HOME, '.codex', 'model-catalogs', 'agentmesh-models.json');
     const section = {
       model: 'deepseek-v4-pro',
       model_provider: 'agentmesh',
+      model_catalog_json: catalogPath,
     };
     const providerSection = {
       name: 'Agent Mesh Gateway',
@@ -125,7 +127,12 @@ const codexDesktopAdapter: ToolAdapter = {
     return {
       path,
       format: 'toml' as const,
-      content: { model: section.model, model_provider: section.model_provider, model_providers: { agentmesh: providerSection } },
+      content: {
+        model: section.model,
+        model_provider: section.model_provider,
+        model_catalog_json: section.model_catalog_json,
+        model_providers: { agentmesh: providerSection },
+      },
     };
   },
   hasGatewayConfig(config: any) {
@@ -327,6 +334,48 @@ export async function connectTools(
           writeFileSync(generated.path, JSON.stringify(generated.content, null, 2) + '\n');
           break;
         }
+      }
+
+      // Codex Desktop 额外生成模型目录文件
+      if (adapter.name === 'codex-desktop' && !opts.dryRun) {
+        try {
+          const catalogDir = join(HOME, '.codex', 'model-catalogs');
+          ensureDir(catalogDir);
+          const catalogPath = join(catalogDir, 'agentmesh-models.json');
+          const catalogData = {
+            models: [
+              {
+                slug: 'deepseek-v4-pro',
+                display_name: 'DeepSeek V4 Pro',
+                description: 'DeepSeek V4 Pro via Agent Mesh — 强推理，代码生成',
+                default_reasoning_level: 'high',
+                supported_reasoning_levels: [
+                  { effort: 'low', description: '快速响应' },
+                  { effort: 'medium', description: '平衡速度与推理' },
+                  { effort: 'high', description: '深度推理' },
+                ],
+                visibility: 'list',
+                supported_in_api: true,
+                priority: 10,
+                service_tiers: [],
+              },
+              {
+                slug: 'deepseek-v4-flash',
+                display_name: 'DeepSeek V4 Flash',
+                description: 'DeepSeek V4 Flash via Agent Mesh — 快速、便宜',
+                default_reasoning_level: 'low',
+                supported_reasoning_levels: [
+                  { effort: 'low', description: '快速响应' },
+                ],
+                visibility: 'list',
+                supported_in_api: true,
+                priority: 20,
+                service_tiers: [],
+              },
+            ],
+          };
+          writeFileSync(catalogPath, JSON.stringify(catalogData, null, 2) + '\n');
+        } catch {}
       }
 
       results.push({
