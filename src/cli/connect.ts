@@ -336,45 +336,23 @@ export async function connectTools(
         }
       }
 
-      // Codex Desktop 额外生成模型目录文件
+      // Codex Desktop: 注入模型到 models_cache.json
       if (adapter.name === 'codex-desktop' && !opts.dryRun) {
         try {
-          const catalogDir = join(HOME, '.codex', 'model-catalogs');
-          ensureDir(catalogDir);
-          const catalogPath = join(catalogDir, 'agentmesh-models.json');
-          const catalogData = {
-            models: [
-              {
-                slug: 'deepseek-v4-pro',
-                display_name: 'DeepSeek V4 Pro',
-                description: 'DeepSeek V4 Pro via Agent Mesh — 强推理，代码生成',
-                default_reasoning_level: 'high',
-                supported_reasoning_levels: [
-                  { effort: 'low', description: '快速响应' },
-                  { effort: 'medium', description: '平衡速度与推理' },
-                  { effort: 'high', description: '深度推理' },
-                ],
-                visibility: 'list',
-                supported_in_api: true,
-                priority: 10,
-                service_tiers: [],
-              },
-              {
-                slug: 'deepseek-v4-flash',
-                display_name: 'DeepSeek V4 Flash',
-                description: 'DeepSeek V4 Flash via Agent Mesh — 快速、便宜',
-                default_reasoning_level: 'low',
-                supported_reasoning_levels: [
-                  { effort: 'low', description: '快速响应' },
-                ],
-                visibility: 'list',
-                supported_in_api: true,
-                priority: 20,
-                service_tiers: [],
-              },
-            ],
-          };
-          writeFileSync(catalogPath, JSON.stringify(catalogData, null, 2) + '\n');
+          const cachePath = join(HOME, '.codex', 'models_cache.json');
+          if (existsSync(cachePath)) {
+            const cache = JSON.parse(readFileSync(cachePath, 'utf-8'));
+            const slugs = new Set(cache.models?.map((m: any) => m.slug) || []);
+            const newModels = [
+              { slug: 'deepseek-v4-pro', display_name: 'DeepSeek V4 Pro', description: 'DeepSeek V4 Pro via Agent Mesh — 强推理，代码生成', default_reasoning_level: 'high', supported_reasoning_levels: [{ effort: 'low', description: '快速响应' }, { effort: 'medium', description: '平衡速度与推理' }, { effort: 'high', description: '深度推理' }], visibility: 'list', supported_in_api: true, priority: 10, service_tiers: [], additional_speed_tiers: [] },
+              { slug: 'deepseek-v4-flash', display_name: 'DeepSeek V4 Flash', description: 'DeepSeek V4 Flash via Agent Mesh — 快速、便宜', default_reasoning_level: 'low', supported_reasoning_levels: [{ effort: 'low', description: '快速响应' }], visibility: 'list', supported_in_api: true, priority: 20, service_tiers: [], additional_speed_tiers: [] },
+            ];
+            let added = 0;
+            for (const m of newModels) {
+              if (!slugs.has(m.slug)) { cache.models.push(m); added++; }
+            }
+            if (added > 0) writeFileSync(cachePath, JSON.stringify(cache, null, 2) + '\n');
+          }
         } catch {}
       }
 
