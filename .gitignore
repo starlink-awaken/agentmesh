@@ -10,8 +10,11 @@ dist
 coverage
 *.lcov
 
-# logs
-logs
+# runtime data
+data/
+logs/
+*.log
+.env
 _.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 

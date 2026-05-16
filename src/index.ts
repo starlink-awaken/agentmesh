@@ -2,11 +2,16 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { apiRoutes } from './routes/api.js';
 import { websocketRoutes } from './routes/websocket.js';
+import { modelGatewayRoutes } from './model-gateway/routes.js';
+import { initModelRouter } from './model-gateway/router.js';
 import { eventBus } from './core/event-bus.js';
 import { router } from './core/router.js';
 import { agentRegistry } from './core/agent-registry.js';
 import { vectorStore } from './core/vector-store.js';
 import { loadConfig, getRoutingRules, getDefaultAgent } from './core/config.js';
+import { circuitBreakerRegistry } from './model-gateway/circuit-breaker.js';
+import { configureRetry } from './model-gateway/retry.js';
+import { initRateLimiter } from './model-gateway/rate-limit.js';
 
 async function main() {
   const config = loadConfig();
@@ -26,6 +31,35 @@ async function main() {
   // 注册路由
   await fastify.register(apiRoutes);
   await fastify.register(websocketRoutes);
+  await fastify.register(modelGatewayRoutes);
+
+  // 初始化模型网关
+  const modelsConfig = (config as any).models;
+  if (modelsConfig) {
+    // 配置熔断器
+    const cbDefaults = modelsConfig.defaults?.circuit_breaker;
+    if (cbDefaults) {
+      for (const [name] of Object.entries(modelsConfig.providers || {})) {
+        circuitBreakerRegistry.configure(name, cbDefaults);
+      }
+    }
+
+    // 配置重试
+    const retryDefaults = modelsConfig.defaults?.retry;
+    if (retryDefaults) {
+      configureRetry(retryDefaults);
+    }
+
+    // 初始化限流器
+    initRateLimiter();
+
+    initModelRouter(modelsConfig);
+    console.log(`[ModelGW] Initialized: ${Object.keys(modelsConfig.providers || {}).length} providers, fallback: ${modelsConfig.fallback_chain?.join(' → ')}`);
+
+    // 配额预热（异步，不阻塞启动）
+    import('./model-gateway/quota.js').then(m => m.probeQuota()).catch(() => {});
+    console.log('[ModelGW] Quota pre-warming started (background)');
+  }
 
   // 初始化组件
   const rules = getRoutingRules();
@@ -54,15 +88,18 @@ async function main() {
 
     console.log(`
 ╔═══════════════════════════════════════════════════╗
-║           Agent Gateway Server                   ║
+║           Agent Mesh Gateway                      ║
 ╠═══════════════════════════════════════════════════╣
-║  HTTP Server: http://${config.host}:${config.port}              ║
-║  WebSocket:  ws://${config.host}:${config.port}/ws             ║
-║  SSE:        http://${config.host}:${config.port}/events       ║
-║  Health:     http://${config.host}:${config.port}/health       ║
-║  Tasks:      http://${config.host}:${config.port}/tasks        ║
-║  Spaces:     http://${config.host}:${config.port}/spaces       ║
-║  Agents:     http://${config.host}:${config.port}/agents       ║
+║  HTTP:       http://${config.host}:${config.port}                  ║
+║  WebSocket:  ws://${config.host}:${config.port}/ws                 ║
+║  Health:     http://${config.host}:${config.port}/health           ║
+║  Tasks:      http://${config.host}:${config.port}/tasks            ║
+║  Spaces:     http://${config.host}:${config.port}/spaces           ║
+║  Agents:     http://${config.host}:${config.port}/agents           ║
+╠═══════════════════════════════════════════════════╣
+║  Model GW:   http://${config.host}:${config.port}/v1/chat/completions ║
+║  Models:     http://${config.host}:${config.port}/v1/models        ║
+║  Quota:      http://${config.host}:${config.port}/model-gateway/quota ║
 ╚═══════════════════════════════════════════════════╝
     `);
 

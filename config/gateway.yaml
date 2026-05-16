@@ -167,6 +167,84 @@ routing:
         - openclaw
       priority: 20
 
+# =============================================================================
+# 模型网关配置 — 多 Provider 路由 + 配额感知 Fallback
+# =============================================================================
+models:
+  default_model: deepseek-chat
+
+  # 默认配置（各 Provider 可覆盖）
+  defaults:
+    circuit_breaker:
+      failure_threshold: 3
+      reset_timeout_ms: 30000
+      half_open_max_requests: 1
+    retry:
+      max_retries: 3
+      base_delay_ms: 500
+      max_delay_ms: 10000
+      retryable_statuses: [429, 500, 502, 503, 504]
+
+  providers:
+    deepseek:
+      base_url: https://api.deepseek.com/v1
+      api_key_env: DEEPSEEK_API_KEY
+      models:
+        - deepseek-chat
+        - deepseek-reasoner
+        - deepseek-v4-pro
+        - deepseek-v4-flash
+    openai:
+      base_url: https://api.openai.com/v1
+      api_key_env: OPENAI_API_KEY
+      models:
+        - gpt-5.1
+        - gpt-5.1-codex
+        - o4-mini
+    openrouter:
+      base_url: https://openrouter.ai/api/v1
+      api_key_env: OPENROUTER_API_KEY
+    ollama:
+      base_url: http://127.0.0.1:11434/v1
+      api_key: ollama
+      models:
+        - qwen3:14b
+        - codestral:22b
+        - llama3.1:8b
+
+  # Fallback 链：主 Provider 不可用时依次尝试
+  fallback_chain:
+    - deepseek
+    - openrouter
+    - ollama
+
+  # 模型名 → 优先 Provider 列表
+  model_routing:
+    "deepseek":
+      - deepseek
+    "gpt-":
+      - openai
+      - deepseek
+    "o1":
+      - openai
+      - deepseek
+    "o4":
+      - openai
+      - deepseek
+    "claude":
+      - openrouter
+    "gemini":
+      - openrouter
+    "qwen":
+      - ollama
+    "codestral":
+      - ollama
+    "llama":
+      - ollama
+
+# =============================================================================
+# Agent 配置
+# =============================================================================
 agents:
   # 内置 Agent（在代码中注册）
   - id: claude-code

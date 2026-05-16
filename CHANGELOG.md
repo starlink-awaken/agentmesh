@@ -1,47 +1,66 @@
-# 更新日志
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [1.0.0] - 2024-02-21
+## [1.2.0] — 2026-05-16
 
 ### Added
-- Initial release of @starlink-awaken/agentmesh
-- 24 built-in AI Agent adapters (Claude Code, OpenClaw, Cursor, Windsurf, Aider, Ollama, etc.)
-- REST API with task submission and management
-- Server-Sent Events (SSE) for real-time updates
-- Smart routing based on task keywords
-- Shared space context management
-- CLI tool with global installation support
-- Configuration system with YAML support
-- Event-driven architecture
-- Metrics and logging system
-- Vector database support (ChromaDB)
-- Docker support
+- **Tests**: 9 test files, 61 tests, 0 failures
+- **CI/CD**: GitHub Actions (typecheck + test + build)
+- **Circuit Breaker**: Three-state (CLOSED/OPEN/HALF_OPEN) with configurable thresholds
+- **Retry Logic**: Exponential backoff with jitter, configurable status codes
+- **Rate Limiting**: Token Bucket per-endpoint, per-IP
+- **`connect` command**: Interactive tool detection and one-click AI tool configuration
+  - Auto-detects: Codex Desktop, Claude Code, Cursor, Shell env
+  - `connect list` — list detected tools
+  - `connect all` — batch configure with backup
+  - `connect` — interactive selection (no typing)
+  - `disconnect all` — restore from backup
+- **Provider Health Check**: `GET /model-gateway/health/:provider` and `/health/all`
+- **Quota Pre-warming**: Async background codexbar fetch at startup
+- **Logger Unification**: Delegate to Pino when available, file persistence always
 
-### Features
-- Multi-agent coordination and collaboration
-- Bidirectional agent dispatching
-- File-level context sharing
-- Custom agent adapter support
-- Task lifecycle management
-- Agent health monitoring
+### Changed
+- Router now skips circuits in OPEN state during fallback
+- Providers wrapped with retry + circuit breaker recording
+- Config extended with `defaults:` section (circuit_breaker, retry)
+- Logger can accept Pino instance from Fastify
 
-### Documentation
-- API documentation
-- README in English and Chinese
-- Contributing guidelines
-- Code of conduct
+## [1.1.0] — 2026-05-16
 
-## [Unreleased]
+### Added
+- **Model Gateway Layer**: Unified OpenAI-compatible endpoint with multi-provider routing
+  - `/v1/chat/completions` — standard chat completions proxy
+  - `/v1/responses` — Codex Desktop Responses API adapter
+  - `/v1/models` — model listing
+- **Quota-Aware Routing**: Integration with codexbar for real-time provider quota sensing
+  - Automatic fallback chain: DeepSeek → OpenRouter → Ollama
+  - Per-model routing rules
+  - 60-second quota cache with automatic refresh
+- **CLI Rewrite**: Full command-line interface
+  - `start` — start the gateway server
+  - `setup` — interactive setup wizard
+  - `health` — health check
+  - `models` — list available models
+  - `quota` — show provider quota status
+  - `config show/path/edit` — config management
+  - `doctor` — system diagnostics
+  - `help [command]` — detailed help
+- **New Providers**: DeepSeek, OpenAI, OpenRouter, Ollama
+- **Structured Logging**: Leveled logging (debug/info/warn/error) with file persistence
+- **Docker Support**: Multi-stage Dockerfile + docker-compose.yml
+- **Documentation**: Architecture docs, API reference, configuration guide, CHANGELOG
 
-### Planned
-- WebSocket support for real-time communication
-- More agent adapters
-- Plugin system
-- Authentication and authorization
-- Rate limiting
-- Advanced routing strategies
-- Metrics dashboard
+### Changed
+- Server startup banner redesigned with model gateway endpoints
+- Config format extended with `models:` section
+- CLI binary now supports subcommands
+
+## [1.0.3] — 2026-05-14
+
+### Added
+- Initial public release
+- Agent orchestration: 25+ agent adapters
+- Task management with REST API + WebSocket
+- Context sharing with shared spaces
+- YAML-based routing rules

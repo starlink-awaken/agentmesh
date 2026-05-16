@@ -1,243 +1,213 @@
-# @starlink-awaken/agentmesh
+# Agent Mesh Gateway
 
 <p align="center">
   <img src="https://img.shields.io/npm/v/@starlink-awaken/agentmesh" alt="npm version">
   <img src="https://img.shields.io/npm/l/@starlink-awaken/agentmesh" alt="license">
   <img src="https://img.shields.io/github/stars/starlink-awaken/agentmesh" alt="stars">
-  <img src="https://img.shields.io/github/forks/starlink-awaken/agentmesh" alt="forks">
 </p>
 
-> 统一的 Agent 调度网关 - 多智能体调度与路由
+> 统一 Agent 调度网关 + 多模型智能路由 — 构建本地 AI 基础设施的核心层
 
 [English](./README.md) | [中文](./README.zh-CN.md)
 
 ## 概述
 
-Agent Mesh 是一个强大的多智能体调度网关，能够协调和调度多种 AI Agent（包括 Claude Code、OpenClaw 以及其他本地安装的 Agent CLI 工具）。
+Agent Mesh Gateway 是一个轻量级的本地 AI 基础设施层，提供两大核心能力：
+
+- **Agent 调度层** — 协调 25+ 种 AI Agent（Claude Code, Codex Desktop, Gemini CLI...），进行任务路由与协作
+- **模型网关层** — 统一 OpenAI 兼容 API 端点，根据 codexbar 实时配额数据智能路由到最优 Provider
 
 ## 特性
 
-- 🤖 **多 Agent 支持** - 内置支持 24+ 种 AI Agent
-- 🎯 **智能路由** - 根据任务类型自动选择合适的 Agent
-- 🔄 **双向调度** - 支持 Agent 之间的相互调用
-- 👥 **多 Agent 协作** - 同一任务可调度多个 Agent
-- 📁 **上下文共享** - 文件级共享空间，支持上下文持久化
-- 🌐 **REST API** - 完整的 HTTP API 支持
-- 📡 **实时事件** - SSE/WebSocket 实时任务更新
-- 📊 **监控日志** - 内置指标收集和日志系统
+- **多 Agent 支持** — 内置 25+ Agent 适配器
+- **智能模型路由** — 根据配额自动选择 Provider（DeepSeek → OpenRouter → Ollama）
+- **配额感知 Fallback** — 通过 codexbar 实时感知各平台配额，自动降级
+- **Codex Desktop 适配** — 内置 Responses API → Chat Completions 转换
+- **OpenAI 兼容 API** — 标准 `/v1/chat/completions` 和 `/v1/models` 端点
+- **CLI 工具** — 完整的命令行管理接口
+- **Docker 支持** — Dockerfile + docker-compose 一键部署
+- **结构化日志** — 带级别的日志 + 文件持久化
 
 ## 快速开始
 
 ### 安装
 
 ```bash
-# 使用 bun
-bun add @starlink-awaken/agentmesh
-
-# 或使用 npm
-npm install @starlink-awaken/agentmesh
-
-# 或使用 yarn
-yarn add @starlink-awaken/agentmesh
-```
-
-### CLI 全局安装
-
-```bash
 npm install -g @starlink-awaken/agentmesh
-
-# 或者
+# 或
 bun install -g @starlink-awaken/agentmesh
 ```
 
-### 启动服务
+### 初始化
 
 ```bash
-# 使用 bun
-bun run src/index.ts
-
-# 或使用 CLI
-agent-gateway start
-
-# 或指定端口
-agent-gateway start --port 8080
+agentmesh setup    # 交互式配置 API Key
+agentmesh start    # 启动网关
+agentmesh doctor   # 检查系统状态
 ```
 
-### 使用 Docker
+### 从源码运行
 
 ```bash
-# 构建镜像
-docker build -t agentmesh .
+git clone https://github.com/starlink-awaken/agentmesh.git
+cd agentmesh
+cp .env.example .env   # 编辑填入 API Key
+./start.sh             # 一键启动
+```
 
-# 运行容器
-docker run -p 3000:3000 agentmesh
+### Docker
+
+```bash
+docker compose up -d   # 启动网关 + ChromaDB
 ```
 
 ## 使用方法
 
-### CLI 命令
+### CLI
 
 ```bash
-# 列出所有可用 Agent
-agent-gateway agents
-
-# 提交通用任务（自动路由）
-agent-gateway task "帮我写一个排序算法"
-
-# 提交任务到指定 Agent
-agent-gateway to claude-code "帮我 review 这段代码"
-
-# 创建共享空间
-agent-gateway space create-space
-
-# 列出所有任务
-agent-gateway tasks
-
-# 检查 Gateway 状态
-agent-gateway health
+agentmesh start              # 启动服务
+agentmesh connect            # 交互式接入 AI 工具 (自动嗅探)
+agentmesh connect list       # 检测已安装工具
+agentmesh disconnect all     # 恢复工具配置
+agentmesh health             # 健康检查
+agentmesh models             # 列出可用模型
+agentmesh quota              # 配额状态
+agentmesh config show        # 查看配置
+agentmesh doctor             # 系统诊断
+agentmesh help               # 帮助
 ```
 
-### REST API
+### API
 
 ```bash
 # 健康检查
-curl http://localhost:3000/health
+curl http://127.0.0.1:3000/health
 
-# 提交任务
-curl -X POST http://localhost:3000/tasks \
+# 模型列表
+curl http://127.0.0.1:3000/v1/models
+
+# 配额信息
+curl http://127.0.0.1:3000/model-gateway/quota
+
+# Chat Completions
+curl -X POST http://127.0.0.1:3000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"payload": {"task": "帮我写一个排序算法"}}'
+  -d '{
+    "model": "deepseek-chat",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
 
-# 获取 Agent 列表
-curl http://localhost:3000/agents
-
-# 创建共享空间
-curl -X POST http://localhost:3000/spaces \
+# Codex Desktop Responses API
+curl -X POST http://127.0.0.1:3000/v1/responses \
   -H "Content-Type: application/json" \
-  -d '{"metadata": {"name": "项目A"}}'
+  -d '{
+    "model": "deepseek-v4-pro",
+    "input": [{"role": "user", "content": "Write a function"}]
+  }'
 ```
 
-### JavaScript/TypeScript
+### 对接 AI 工具
 
-```typescript
-import { AgentGateway } from '@starlink-awaken/agentmesh';
-
-const gateway = new AgentGateway({
-  port: 3000,
-  agents: [
-    { id: 'claude-code', command: 'claude', args: ['-p'] }
-  ]
-});
-
-await gateway.start();
-
-// 提交任务
-const task = await gateway.submitTask({
-  payload: {
-    task: '帮我写一个排序算法'
-  }
-});
-
-console.log('Task ID:', task.id);
+**一键接入：**
+```bash
+agentmesh connect            # 交互式选择工具
+agentmesh connect all        # 接入所有检测到的工具
+agentmesh disconnect all     # 恢复
 ```
 
-## 配置
-
-### 路由规则
-
-在 `config/gateway.yaml` 中配置任务路由规则：
-
-```yaml
-routing:
-  rules:
-    - name: code-review
-      keywords: [review, code review, pr review]
-      agent: claude-code
-      priority: 10
-
-    - name: browser-automation
-      keywords: [browser, scrape, click]
-      agent: openclaw
-      priority: 10
+**Codex Desktop** (`~/.codex/config.toml`):
+```toml
+model_provider = "agentmesh"
+[model_providers.agentmesh]
+name = "Agent Mesh"
+base_url = "http://127.0.0.1:3000/v1"
+wire_api = "responses"
 ```
 
-### Agent 配置
-
-```yaml
-agents:
-  - id: claude-code
-    name: Claude Code
-    type: claude-code
-    capabilities:
-      - code-generation
-      - code-review
-
-  - id: my-agent
-    name: My Custom Agent
-    type: http
-    endpoint: http://localhost:8080
-```
-
-## 支持的 Agent
-
-| Agent | 描述 | 能力 |
-|-------|------|------|
-| claude-code | Anthropic Claude Code | 代码生成、审查、重构 |
-| openclaw | OpenClaw | 浏览器自动化、网页抓取 |
-| cursor | Cursor | 代码补全、聊天 |
-| windsurf | Windsurf | Agent 编码、Flow 状态 |
-| aider | Aider | Git 集成编辑、多文件修改 |
-| ollama | Ollama | 本地 LLM、隐私优先 |
-| perplexity | Perplexity | 研究助手、网络搜索 |
-| grok | xAI Grok | 推理、代码生成 |
-| ... | 更多 Agent | 见文档 |
+**Claude Code / 其他工具:**
+统一指向 `http://127.0.0.1:3000/v1`，使用 OpenAI 兼容 API。
 
 ## 架构
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Agent Mesh Gateway                       │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
-│  │  Task API   │  │  Event Bus  │  │  Discovery │       │
-│  │  (REST/WS) │  │  (Pub/Sub) │  │   Service  │       │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘       │
-│         │                 │                 │               │
-│  ┌──────┴────────────────┴─────────────────┴──────┐      │
-│  │              Context Manager                     │      │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐       │      │
-│  │  │  Memory │  │  Files  │  │VectorDB │       │      │
-│  │  │  Cache  │  │ Persist │  │ Storage │       │      │
-│  │  └─────────┘  └─────────┘  └─────────┘       │      │
-│  └──────────────────────┬──────────────────────────┘      │
-└─────────────────────────┼──────────────────────────────────┘
-                          │
-        ┌─────────────────┼─────────────────┐
-        ▼                 ▼                 ▼
-   ┌─────────┐       ┌─────────┐       ┌─────────┐
-   │ Claude  │       │  Open   │       │  Other  │
-   │  Code   │◄────►│  Claw   │◄────►│  Agents │
-   └─────────┘       └─────────┘       └─────────┘
+  Codex Desktop   Claude Code   Gemini CLI   Other Tools
+        │               │             │            │
+        └───────────────┼─────────────┼────────────┘
+                        │   /v1/*     │
+                        ▼             ▼
+              ┌─────────────────────────┐
+              │   Agent Mesh Gateway    │
+              │                         │
+              │  ┌───────────────────┐  │
+              │  │  Model Router     │  │  ← codexbar 配额感知
+              │  │  Provider Select  │  │
+              │  └───────────────────┘  │
+              │                         │
+              │  ┌───────────────────┐  │
+              │  │  Agent Router     │  │  ← 任务关键词匹配
+              │  │  Task Dispatcher  │  │
+              │  └───────────────────┘  │
+              └─────────┬───────────────┘
+                        │
+         ┌──────────────┼──────────────┐
+         ▼              ▼              ▼
+     DeepSeek      OpenRouter       Ollama
 ```
+
+## 配置
+
+配置文件: `config/gateway.yaml`
+
+```yaml
+models:
+  providers:
+    deepseek:
+      base_url: https://api.deepseek.com/v1
+      api_key_env: DEEPSEEK_API_KEY
+      models: [deepseek-chat, deepseek-v4-pro]
+    # ... 更多 Provider
+
+  fallback_chain: [deepseek, openrouter, ollama]
+
+  model_routing:
+    "gpt-": [openai, deepseek]
+    "deepseek": [deepseek]
+    "claude": [openrouter]
+```
+
+## 支持的 Provider
+
+| Provider | 类型 | 需要 |
+|----------|------|------|
+| DeepSeek | API Key | `DEEPSEEK_API_KEY` |
+| OpenAI | API Key | `OPENAI_API_KEY` |
+| OpenRouter | API Key | `OPENROUTER_API_KEY` |
+| Ollama | 本地 | 安装 [Ollama](https://ollama.ai) |
+
+## API 端点
+
+| 端点 | 说明 |
+|------|------|
+| `GET /health` | 健康检查 |
+| `GET /v1/models` | 模型列表 |
+| `POST /v1/chat/completions` | Chat Completions |
+| `POST /v1/responses` | Codex Desktop Responses |
+| `GET /model-gateway/health` | 网关健康 + 配额 |
+| `GET /model-gateway/quota` | 配额详情 |
+| `GET /agents` | Agent 列表 |
+| `POST /tasks` | 提交 Agent 任务 |
 
 ## 文档
 
+- [架构设计](./docs/architecture.md)
 - [API 文档](./docs/api.md)
-- [配置参考](./config/gateway.yaml)
-- [Agent 开发指南](./docs/agent-adapter.md)
+- [配置参考](./docs/configuration.md)
 
 ## 贡献
 
-欢迎贡献代码！请阅读 [贡献指南](./CONTRIBUTING.md) 了解如何参与项目开发。
+欢迎贡献！详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
 ## 许可证
 
-MIT License - 请查看 [LICENSE](./LICENSE) 文件。
-
-## 赞助
-
-如果你喜欢这个项目，请考虑赞助我们。
-
----
-
-Made with ❤️ by [Starlink Awaken](https://github.com/starlink-awaken)
+MIT — [LICENSE](./LICENSE)
