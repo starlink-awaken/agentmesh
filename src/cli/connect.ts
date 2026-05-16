@@ -493,28 +493,15 @@ export async function interactiveConnect(): Promise<void> {
 }
 
 function readStdinLine(): Promise<string> {
-  const decoder = new TextDecoder();
   return new Promise((resolve) => {
-    const chunks: Uint8Array[] = [];
-    const stream = Bun.stdin.stream() as ReadableStream<Uint8Array>;
-    const reader = stream.getReader();
-    function pump(): void {
-      reader.read().then(({ done, value }) => {
-        if (done || !value) {
-          resolve(decoder.decode(Bun.concatArrayBuffers(chunks.map(c => c.buffer))).trim());
-          return;
-        }
-        const text = decoder.decode(value);
-        if (text.includes('\n')) {
-          chunks.push(value);
-          resolve(decoder.decode(Bun.concatArrayBuffers(chunks.map(c => c.buffer))).trim());
-          return;
-        }
-        chunks.push(value);
-        pump();
-      });
-    }
-    pump();
+    // 使用 process.stdin 的 data 事件，每次重新监听（支持多次调用）
+    const onData = (chunk: Buffer) => {
+      process.stdin.removeListener('data', onData);
+      process.stdin.pause();
+      resolve(chunk.toString().trim());
+    };
+    process.stdin.resume();
+    process.stdin.once('data', onData);
   });
 }
 
