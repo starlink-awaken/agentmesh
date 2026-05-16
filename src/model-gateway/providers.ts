@@ -113,14 +113,3 @@ function extractTextContent(content: any): string {
   }
   return String(content || '');
 }
-
-export function buildStreamingResponse(upstreamResp: Response): Response {
-  return new Response(upstreamResp.body, {
-    status: upstreamResp.status,
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
-}

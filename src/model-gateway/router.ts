@@ -2,8 +2,8 @@ import type { ModelGatewayConfig, ResolvedProvider } from './types.js';
 import { isProviderAvailable } from './quota.js';
 import { circuitBreakerRegistry } from './circuit-breaker.js';
 
-// 模型名重映射：对外模型名 → 实际 Provider 的模型名
-const MODEL_ALIASES: Record<string, Record<string, string>> = {
+// 模型名重映射：对外模型名 → 实际 Provider 的模型名（可从 config 覆盖）
+let modelAliases: Record<string, Record<string, string>> = {
   deepseek: {
     'gpt-5.3-codex': 'deepseek-v4-pro',
     'gpt-5.4': 'deepseek-v4-pro',
@@ -17,6 +17,13 @@ let config: ModelGatewayConfig;
 
 export function initModelRouter(cfg: ModelGatewayConfig): void {
   config = cfg;
+  // 从 config 加载模型别名（覆盖默认）
+  if ((cfg as any).model_aliases) {
+    for (const [key, val] of Object.entries((cfg as any).model_aliases)) {
+      modelAliases.deepseek = modelAliases.deepseek || {};
+      modelAliases.deepseek[key] = val as string;
+    }
+  }
 }
 
 export function getConfig(): ModelGatewayConfig {
@@ -30,7 +37,7 @@ export function resolveProvider(model: string): ResolvedProvider | null {
   // 1. 按 model_routing 配置查找
   const routingEntries = Object.entries(config.model_routing);
   for (const [pattern, providers] of routingEntries as [string, string[]][]) {
-    if (model.includes(pattern)) {
+    if (model.startsWith(pattern)) {
       for (const providerName of providers) {
         const providerCfg = config.providers[providerName];
         if (!providerCfg) continue;
@@ -88,7 +95,7 @@ export function resolveProvider(model: string): ResolvedProvider | null {
 }
 
 export function remapModel(model: string, providerName: string): string {
-  return MODEL_ALIASES[providerName]?.[model] || model;
+  return modelAliases[providerName]?.[model] || model;
 }
 
 function resolveApiKey(_name: string, providerCfg: any): string | null {
