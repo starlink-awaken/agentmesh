@@ -5,7 +5,8 @@ import { join, dirname } from 'node:path';
 import { logger } from '../core/logger.js';
 
 const CONFIG_DIR = join(Bun.env.HOME || '~', '.config', 'agentmesh');
-const PROJECT_ROOT = dirname(dirname(import.meta.dir));
+const _metaDir = (import.meta as any).dir || (import.meta as any).dirname || '.';
+const PROJECT_ROOT = dirname(dirname(_metaDir));
 
 function prompt(msg: string, def?: string): string {
   const suffix = def ? ` [${def}]` : '';
