@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'fs';
 import { parse } from 'yaml';
-import { join } from 'path';
+import { join, dirname } from 'path';
 
 export interface AgentConfig {
   id: string;
@@ -60,13 +60,19 @@ export function loadConfig(configPath?: string): GatewayConfig {
     return cachedConfig;
   }
 
+  const pkgDir = (() => {
+    try { return dirname(dirname((import.meta as any).dir || (import.meta as any).dirname || '')); } catch { return ''; }
+  })();
+
   const paths = configPath
     ? [configPath]
     : [
         './config/gateway.yaml',
         './config/gateway.yml',
         join(process.cwd(), 'config/gateway.yaml'),
-        join(process.cwd(), 'config/gateway.yml')
+        join(process.cwd(), 'config/gateway.yml'),
+        join(pkgDir, 'config', 'gateway.yaml'),
+        join(pkgDir, 'config', 'gateway.yml'),
       ];
 
   for (const path of paths) {
