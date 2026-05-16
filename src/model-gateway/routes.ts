@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { resolveProvider, getConfig } from './router.js';
+import { resolveProvider, getConfig, remapModel } from './router.js';
 import { callChatCompletions, callResponsesApi } from './providers.js';
 import { getQuotaSummary, probeQuota } from './quota.js';
 import { circuitBreakerRegistry } from './circuit-breaker.js';
@@ -52,8 +52,8 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
       return reply.code(400).send({ error: { message: 'messages is required' } });
     }
 
-    const model = body.model || 'deepseek-chat';
-    const provider = resolveProvider(model);
+    const originalModel = body.model || 'deepseek-chat';
+    const provider = resolveProvider(originalModel);
 
     if (!provider) {
       return reply.code(503).send({
@@ -61,7 +61,8 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
       });
     }
 
-    console.log(`[ModelGW] ${model} → ${provider.name} (${body.stream ? 'stream' : 'sync'})`);
+    const model = remapModel(originalModel, provider.name);
+    console.log(`[ModelGW] ${originalModel} → ${provider.name}/${model} (${body.stream ? 'stream' : 'sync'})`);
 
     try {
       const upstreamResp = await callChatCompletions(provider, {

@@ -2,6 +2,17 @@ import type { ModelGatewayConfig, ResolvedProvider } from './types.js';
 import { isProviderAvailable } from './quota.js';
 import { circuitBreakerRegistry } from './circuit-breaker.js';
 
+// 模型名重映射：对外模型名 → 实际 Provider 的模型名
+const MODEL_ALIASES: Record<string, Record<string, string>> = {
+  deepseek: {
+    'gpt-5.3-codex': 'deepseek-v4-pro',
+    'gpt-5.4': 'deepseek-v4-pro',
+    'gpt-5.5': 'deepseek-v4-pro',
+    'o4-mini': 'deepseek-v4-flash',
+    'claude-sonnet-4-6': 'deepseek-v4-pro',
+  },
+};
+
 let config: ModelGatewayConfig;
 
 export function initModelRouter(cfg: ModelGatewayConfig): void {
@@ -74,6 +85,10 @@ export function resolveProvider(model: string): ResolvedProvider | null {
   }
 
   return null;
+}
+
+export function remapModel(model: string, providerName: string): string {
+  return MODEL_ALIASES[providerName]?.[model] || model;
 }
 
 function resolveApiKey(_name: string, providerCfg: any): string | null {
