@@ -64,27 +64,28 @@ function backupFile(originalPath: string): string | null {
 }
 
 // TOML 简单序列化（够用，不引入额外依赖）
-function toToml(obj: Record<string, any>, indent = ''): string {
+function toToml(obj: Record<string, any>, parentKey = ''): string {
   const lines: string[] = [];
   for (const [key, value] of Object.entries(obj)) {
     if (value === null || value === undefined) continue;
+    const fullKey = parentKey ? `${parentKey}.${key}` : key;
     if (typeof value === 'object' && !Array.isArray(value)) {
-      lines.push(`${indent}[${key}]`);
-      lines.push(toToml(value, indent));
+      lines.push(`[${fullKey}]`);
+      lines.push(toToml(value, fullKey));
     } else if (Array.isArray(value)) {
       for (const item of value) {
         if (typeof item === 'string') {
-          lines.push(`${indent}${key} = "${item}"`);
+          lines.push(`${key} = "${item}"`);
         } else {
-          lines.push(`${indent}${key} = ${JSON.stringify(item)}`);
+          lines.push(`${key} = ${JSON.stringify(item)}`);
         }
       }
     } else if (typeof value === 'string') {
-      lines.push(`${indent}${key} = "${value}"`);
+      lines.push(`${key} = "${value}"`);
     } else if (typeof value === 'boolean') {
-      lines.push(`${indent}${key} = ${value}`);
+      lines.push(`${key} = ${value}`);
     } else {
-      lines.push(`${indent}${key} = ${value}`);
+      lines.push(`${key} = ${value}`);
     }
   }
   return lines.join('\n');

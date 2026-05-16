@@ -8,7 +8,7 @@ import { resolve, dirname, join } from 'node:path';
 import { initLogger } from './core/logger.js';
 
 const PROJECT_ROOT = resolve(dirname(import.meta.dir), '..');
-const VERSION = '1.2.5';
+const VERSION = '1.2.6';
 const BANNER = `
    █████╗  ██████╗ ███████╗███╗   ██╗████████╗
   ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
