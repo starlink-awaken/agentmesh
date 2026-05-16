@@ -60,13 +60,22 @@ export function loadConfig(configPath?: string): GatewayConfig {
     return cachedConfig;
   }
 
-  const pkgDir = (() => {
+  // 从当前文件位置向上搜索 config/gateway.yaml（兼容 src/ 和 dist/）
+  function findConfigUpward(): string {
     try {
       let d = (import.meta as any).dir || (import.meta as any).dirname || '';
-      for (let i = 0; i < 4; i++) d = dirname(d); // 上溯到包根
-      return d;
-    } catch { return ''; }
-  })();
+      for (let i = 0; i < 10; i++) {
+        const candidate = join(d, 'config', 'gateway.yaml');
+        if (existsSync(candidate)) return candidate;
+        const ymlCandidate = join(d, 'config', 'gateway.yml');
+        if (existsSync(ymlCandidate)) return ymlCandidate;
+        d = dirname(d);
+      }
+    } catch {}
+    return '';
+  }
+
+  const pkgConfig = findConfigUpward();
 
   const paths = configPath
     ? [configPath]
@@ -75,9 +84,8 @@ export function loadConfig(configPath?: string): GatewayConfig {
         './config/gateway.yml',
         join(process.cwd(), 'config/gateway.yaml'),
         join(process.cwd(), 'config/gateway.yml'),
-        join(pkgDir, 'config', 'gateway.yaml'),
-        join(pkgDir, 'config', 'gateway.yml'),
-      ];
+        pkgConfig,
+      ].filter(Boolean);
 
   for (const path of paths) {
     try {
