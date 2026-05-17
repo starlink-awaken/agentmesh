@@ -44,8 +44,8 @@ export function recordRequest(log: RequestLog): void {
     m.lastError = log.error;
     m.lastErrorTime = log.timestamp;
   }
-  recentRequests.unshift(log);
-  if (recentRequests.length > MAX_RECENT) recentRequests.pop();
+  recentRequests.push(log);
+  if (recentRequests.length > MAX_RECENT) recentRequests.shift();
 }
 
 export function getMetrics() {
@@ -71,7 +71,7 @@ export function getMetrics() {
     total_requests: totalRequests,
     total_failures: totalFailures,
     providers,
-    recent: recentRequests.slice(0, 20).map(r => ({
+    recent: recentRequests.slice(-20).reverse().map(r => ({
       time: new Date(r.timestamp).toISOString(),
       model: r.model,
       provider: r.provider,

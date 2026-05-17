@@ -18,8 +18,8 @@ let config: ModelGatewayConfig;
 export function initModelRouter(cfg: ModelGatewayConfig): void {
   config = cfg;
   // 从 config 加载模型别名（覆盖默认）
-  if ((cfg as any).model_aliases) {
-    for (const [key, val] of Object.entries((cfg as any).model_aliases)) {
+  if (cfg.model_aliases) {
+    for (const [key, val] of Object.entries(cfg.model_aliases)) {
       modelAliases.deepseek = modelAliases.deepseek || {};
       modelAliases.deepseek[key] = val as string;
     }

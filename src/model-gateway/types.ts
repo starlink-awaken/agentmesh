@@ -12,6 +12,7 @@ export interface ModelGatewayConfig {
   providers: Record<string, ModelProviderConfig>;
   fallback_chain: string[];
   model_routing: Record<string, string[]>;
+  model_aliases?: Record<string, string>;
 }
 
 export interface ResolvedProvider {

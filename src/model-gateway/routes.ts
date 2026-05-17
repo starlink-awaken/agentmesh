@@ -77,7 +77,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
         tool_choice: body.tool_choice,
       });
 
-      if (!upstreamResp.ok && upstreamResp.status !== 200) {
+      if (!upstreamResp.ok) {
         const errText = await upstreamResp.text();
         recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart, status: upstreamResp.status, error: errText.slice(0, 200), streaming: !!body.stream });
         console.error(`[ModelGW] ${provider.name} error ${upstreamResp.status}: ${errText.slice(0, 200)}`);

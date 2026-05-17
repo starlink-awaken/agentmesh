@@ -189,6 +189,9 @@ function convertChatToResponses(ccData: Record<string, any>): Record<string, any
   };
 }
 
+const EVENT_DELTA = 'response.output_text.delta';
+const EVENT_TOOL_DELTA = 'response.function_call_arguments.delta';
+const EVENT_COMPLETED = 'response.completed';
 const sseEncoder = new TextEncoder();
 
 function transformSSEStream(upstreamBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
@@ -209,10 +212,11 @@ function transformSSEStream(upstreamBody: ReadableStream<Uint8Array>): ReadableS
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+          let newlineIdx: number;
+          while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
+            const line = buffer.slice(0, newlineIdx);
+            buffer = buffer.slice(newlineIdx + 1);
 
-          for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
             const data = line.slice(6).trim();
             if (data === '[DONE]') {
@@ -232,7 +236,7 @@ function transformSSEStream(upstreamBody: ReadableStream<Uint8Array>): ReadableS
               if (delta.content) {
                 contentBuffer += delta.content;
                 const evt = `data: ${JSON.stringify({
-                  type: 'response.output_text.delta',
+                  type: EVENT_DELTA,
                   delta: delta.content,
                 })}\n\n`;
                 controller.enqueue(sseEncoder.encode(evt));
@@ -256,7 +260,7 @@ function transformSSEStream(upstreamBody: ReadableStream<Uint8Array>): ReadableS
 
                 // 发送 tool_call delta 事件
                 const tcEvt = `data: ${JSON.stringify({
-                  type: 'response.function_call_arguments.delta',
+                  type: EVENT_TOOL_DELTA,
                   tool_calls: Object.values(toolCallAccum),
                 })}\n\n`;
                 controller.enqueue(sseEncoder.encode(tcEvt));
@@ -295,7 +299,7 @@ function buildResponseEvent(
   }
 
   return `data: ${JSON.stringify({
-    type: isFinal ? 'response.completed' : 'response.output_text.delta',
+    type: isFinal ? EVENT_COMPLETED : EVENT_DELTA,
     response: isFinal ? { id, model, object: 'response', status: 'completed', output } : undefined,
     delta: isFinal ? undefined : content,
   })}\n\n`;
