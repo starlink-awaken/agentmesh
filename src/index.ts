@@ -32,6 +32,8 @@ async function main() {
   await fastify.register(apiRoutes);
   await fastify.register(websocketRoutes);
   await fastify.register(modelGatewayRoutes);
+  const { hermesRoutes } = await import('./hermes/routes.js');
+  await fastify.register(hermesRoutes);
 
   // 初始化模型网关
   const modelsConfig = (config as any).models;

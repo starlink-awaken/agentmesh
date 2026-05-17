@@ -107,6 +107,7 @@ ${BANNER}
   接入命令:
     connect [tool]        一键接入 AI 工具 (--dry-run 预览)
     disconnect [tool]     恢复工具配置到接入前状态
+    hermes setup          配置 Hermes 双向通路 (手机↔网关)
 
   查询命令:
     health, status        健康检查
@@ -431,6 +432,45 @@ async function main() {
       case 'release':
         const { runRelease } = await import('./cli/release.js');
         await runRelease(rest[0] || 'patch'); break;
+      case 'hermes':
+        if (rest[0] === 'setup') {
+          console.log(`
+  ╔═══════════════════════════════════════════════════╗
+  ║     Hermes ↔ Agent Mesh 双向通路设置               ║
+  ╚═══════════════════════════════════════════════════╝
+
+  Hermes 网关已在运行（Discord + Weixin 已连接）。
+  现在只需添加一个 webhook 订阅，让 Hermes 能调用本网关。
+
+  方式 1: 手动订阅 (推荐)
+    hermes webhook subscribe \\
+      --name agentmesh \\
+      --url http://127.0.0.1:3000/hermes/task \\
+      --event message.received \\
+      --format '{"prompt":"{{message}}","model":"deepseek-chat"}'
+
+  方式 2: 从 Discord/Weixin 用 !task 命令触发
+    在 Hermes 的 skills 目录创建 agentmesh skill:
+      ~/.hermes/skills/agentmesh.md
+    内容: "当用户发送 !task <描述> 时，POST 到 http://127.0.0.1:3000/hermes/task"
+
+  当前网关端点:
+    POST /hermes/task       提交任务 (手机 → 网关)
+    GET  /hermes/task/:id   查询结果 (网关 → 手机)
+    GET  /hermes/health     Hermes 健康检查
+
+  使用流程:
+    📱 手机 Discord/Weixin 发消息
+      → Hermes Gateway 接收
+      → Webhook → POST :3000/hermes/task
+      → Agent Mesh 执行
+      → 结果返回 Hermes
+      → 📱 手机收到回复
+`);
+        } else {
+          console.log('\n  agentmesh hermes setup    Hermes 双向通路设置指南\n');
+        }
+        break;
       case 'doctor': case 'check':
         await cmdDoctor(); break;
       default:
