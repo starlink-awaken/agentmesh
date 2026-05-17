@@ -12,8 +12,11 @@ class ReleaseError extends Error {}
 async function sh(cmd: string[], cwd?: string): Promise<string> {
   const proc = Bun.spawn(cmd, { cwd: cwd || PROJECT_ROOT, stdout: 'pipe', stderr: 'pipe' });
   const out = await new Response(proc.stdout).text();
-  const err = await new Response(proc.stderr).text();
-  if (proc.exitCode !== 0) throw new ReleaseError(`${cmd.join(' ')} failed: ${err || out}`);
+  await proc.exited;
+  if (proc.exitCode !== 0) {
+    const err = await new Response(proc.stderr).text();
+    throw new ReleaseError(`${cmd.join(' ')} failed (exit ${proc.exitCode}): ${err || out}`);
+  }
   return out.trim();
 }
 
