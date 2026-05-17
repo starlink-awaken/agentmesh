@@ -5,6 +5,15 @@ import { getQuotaSummary, probeQuota } from './quota.js';
 import { circuitBreakerRegistry } from './circuit-breaker.js';
 import { checkAllProviders } from './health.js';
 import { getMetrics, recordRequest } from './metrics.js';
+import { checkRateLimit } from './rate-limit.js';
+
+function logReq(originalModel: string, providerName: string, actualModel: string, reqStart: number, status: number, streaming: boolean, error?: string) {
+  recordRequest({
+    timestamp: Date.now(), model: originalModel,
+    provider: providerName, actualModel, latencyMs: Date.now() - reqStart,
+    status, streaming, error,
+  });
+}
 
 export async function modelGatewayRoutes(fastify: FastifyInstance) {
   // 健康检查 + 配额总览
@@ -48,6 +57,12 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
 
   // POST /v1/chat/completions — 标准 OpenAI 兼容端点
   fastify.post('/v1/chat/completions', async (request: FastifyRequest, reply: FastifyReply) => {
+    const ip = request.ip || '127.0.0.1';
+    const rl = checkRateLimit('/v1/chat/completions', ip);
+    if (!rl.allowed) {
+      return reply.code(429).header('Retry-After', String(rl.resetSeconds)).header('X-RateLimit-Limit', rl.limit).header('X-RateLimit-Remaining', '0').send({ error: { message: 'Rate limit exceeded' } });
+    }
+
     const body = request.body as Record<string, any>;
     if (!body || !body.messages) {
       return reply.code(400).send({ error: { message: 'messages is required' } });
@@ -79,7 +94,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
 
       if (!upstreamResp.ok) {
         const errText = await upstreamResp.text();
-        recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart, status: upstreamResp.status, error: errText.slice(0, 200), streaming: !!body.stream });
+        logReq(originalModel, provider.name, model, reqStart, upstreamResp.status, !!body.stream, errText.slice(0, 200));
         console.error(`[ModelGW] ${provider.name} error ${upstreamResp.status}: ${errText.slice(0, 200)}`);
         return reply.code(upstreamResp.status).send({
           error: { message: `${provider.name}: ${errText.slice(0, 500)}` },
@@ -87,7 +102,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
       }
 
       if (body.stream) {
-        recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart, status: 200, streaming: true });
+        logReq(originalModel, provider.name, model, reqStart, 200, true);
         return reply.headers({
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
@@ -96,10 +111,10 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
       }
 
       const data = await upstreamResp.json();
-      recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart, status: 200, streaming: false });
+      logReq(originalModel, provider.name, model, reqStart, 200, false);
       reply.send(data);
     } catch (err) {
-      recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart, status: 502, error: (err as Error).message, streaming: !!body.stream });
+      logReq(originalModel, provider.name, model, reqStart, 502, !!body.stream, (err as Error).message);
       console.error(`[ModelGW] Error calling ${provider.name}:`, (err as Error).message);
       reply.code(502).send({
         error: { message: `Provider error: ${(err as Error).message}` },
@@ -109,6 +124,12 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
 
   // POST /v1/responses — Codex Desktop Responses API 适配
   fastify.post('/v1/responses', async (request: FastifyRequest, reply: FastifyReply) => {
+    const ip = request.ip || '127.0.0.1';
+    const rl = checkRateLimit('/v1/responses', ip);
+    if (!rl.allowed) {
+      return reply.code(429).header('Retry-After', String(rl.resetSeconds)).send({ error: { message: 'Rate limit exceeded' } });
+    }
+
     const body = request.body as Record<string, any>;
     if (!body || !body.input) {
       return reply.code(400).send({ error: { message: 'input is required' } });
@@ -133,13 +154,13 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
 
       if (!upstreamResp.ok) {
         const errText = await upstreamResp.text();
-        recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart, status: upstreamResp.status, error: errText.slice(0, 200), streaming: !!body.stream });
+        logReq(originalModel, provider.name, model, reqStart, upstreamResp.status, !!body.stream, errText.slice(0, 200));
         return reply.code(upstreamResp.status).send({
           error: { message: `${provider.name}: ${errText.slice(0, 500)}` },
         });
       }
 
-      recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart, status: 200, streaming: !!body.stream });
+      logReq(originalModel, provider.name, model, reqStart, 200, !!body.stream);
 
       if (body.stream) {
         return reply.headers({
@@ -151,7 +172,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
       const data = await upstreamResp.json();
       reply.send(data);
     } catch (err) {
-      recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart, status: 502, error: (err as Error).message, streaming: !!body.stream });
+      logReq(originalModel, provider.name, model, reqStart, 502, !!body.stream, (err as Error).message);
       console.error(`[ModelGW:Responses] Error:`, (err as Error).message);
       reply.code(502).send({
         error: { message: `Provider error: ${(err as Error).message}` },

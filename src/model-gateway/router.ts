@@ -19,9 +19,22 @@ export function initModelRouter(cfg: ModelGatewayConfig): void {
   config = cfg;
   // 从 config 加载模型别名（覆盖默认）
   if (cfg.model_aliases) {
-    for (const [key, val] of Object.entries(cfg.model_aliases)) {
+    // cfg.model_aliases: { "gpt-x": "deepseek-v4-pro", "claude-y": "claude-opus" }
+    // 按目标模型名反查对应的 provider → 写入对应 provider 的别名表
+    for (const [aliasKey, realModel] of Object.entries(cfg.model_aliases)) {
+      for (const [providerName, providerCfg] of Object.entries(config.providers)) {
+        const providerModels = providerCfg.models || [];
+        if (providerModels.includes(realModel as string)) {
+          modelAliases[providerName] = modelAliases[providerName] || {};
+          modelAliases[providerName][aliasKey] = realModel as string;
+          break;
+        }
+      }
+      // 兜底：如果没匹配到任何 provider，放入 deepseek
       modelAliases.deepseek = modelAliases.deepseek || {};
-      modelAliases.deepseek[key] = val as string;
+      if (!modelAliases.deepseek[aliasKey]) {
+        modelAliases.deepseek[aliasKey] = realModel as string;
+      }
     }
   }
 }
