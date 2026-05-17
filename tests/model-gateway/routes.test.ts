@@ -50,13 +50,13 @@ describe('model gateway routes', () => {
   });
 
   // 这些端点依赖 codexbar（外部进程，15s+），单元测试 skip，集成测试单独运行
-  test.skip('GET /model-gateway/health returns status', async () => {
-    const resp = await fastify.inject({ method: 'GET', url: '/model-gateway/health' });
+  test.skip('GET /v1/model-gateway/health returns status', async () => {
+    const resp = await fastify.inject({ method: 'GET', url: '/v1/model-gateway/health' });
     expect([200, 500]).toContain(resp.statusCode);
   });
 
-  test.skip('GET /model-gateway/quota returns quota data', async () => {
-    const resp = await fastify.inject({ method: 'GET', url: '/model-gateway/quota' });
+  test.skip('GET /v1/model-gateway/quota returns quota data', async () => {
+    const resp = await fastify.inject({ method: 'GET', url: '/v1/model-gateway/quota' });
     expect([200, 500]).toContain(resp.statusCode);
   });
 

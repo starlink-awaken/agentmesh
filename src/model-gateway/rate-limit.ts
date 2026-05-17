@@ -18,8 +18,17 @@ const DEFAULTS: Record<string, LimitConfig> = {
 };
 
 export function initRateLimiter(configsOverride?: Record<string, Partial<LimitConfig>>): void {
+  // 加载默认配置
   for (const [path, defaults] of Object.entries(DEFAULTS)) {
     configs.set(path, { ...defaults, ...configsOverride?.[path] });
+  }
+  // 加载配置中新增的路径（不在默认列表中的）
+  if (configsOverride) {
+    for (const [path, cfg] of Object.entries(configsOverride)) {
+      if (!configs.has(path)) {
+        configs.set(path, { rpm: cfg.rpm ?? 30, enabled: cfg.enabled ?? true });
+      }
+    }
   }
 
   // 每 60 秒清理过期桶

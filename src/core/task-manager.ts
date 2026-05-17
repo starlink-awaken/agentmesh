@@ -1,16 +1,31 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Task, AgentMessage, Agent, Error } from '../types/index.js';
+import type { Task, AgentMessage, Error } from '../types/index.js';
 import { eventBus } from './event-bus.js';
 import { router } from './router.js';
 import { contextManager } from './context-manager.js';
 import { agentRegistry } from './agent-registry.js';
+import type { TaskStore } from './store.js';
 
 export class TaskManager {
-  private tasks: Map<string, Task> = new Map();
+  private tasks = new Map<string, Task>();
+  private controllers = new Map<string, AbortController>();
+  private store: TaskStore | null = null;
 
-  /**
-   * 创建新任务
-   */
+  /** 接入持久化存储 */
+  useStore(store: TaskStore): void {
+    this.store = store;
+    // 从存储恢复任务到内存
+    for (const task of store.loadAll()) {
+      this.tasks.set(task.id, task);
+    }
+  }
+
+  private _save(task: Task): void {
+    this.tasks.set(task.id, task);
+    this.store?.save(task);
+  }
+
+  /** 创建新任务 */
   async createTask(request: AgentMessage): Promise<Task> {
     const taskId = uuidv4();
     const task: Task = {
@@ -22,133 +37,131 @@ export class TaskManager {
       updatedAt: Date.now()
     };
 
-    this.tasks.set(taskId, task);
+    this._save(task);
+    this.controllers.set(taskId, new AbortController());
 
-    // 发布任务提交事件
-    eventBus.publishTaskEvent('task.submitted', {
-      ...request,
-      id: taskId
-    });
-
+    eventBus.publishTaskEvent('task.submitted', { ...request, id: taskId });
     return task;
   }
 
-  /**
-   * 分配任务到 Agent
-   */
+  /** 分配任务 */
   assignTask(taskId: string, agentIds: string[]): Task | null {
     const task = this.tasks.get(taskId);
-    if (!task) {
-      return null;
-    }
+    if (!task) return null;
 
     task.assignedAgents = agentIds;
     task.status = 'assigned';
     task.updatedAt = Date.now();
+    this._save(task);
 
-    // 发布任务分配事件
-    eventBus.publishTaskEvent('task.assigned', {
-      ...task.request,
-      id: taskId
-    });
-
+    eventBus.publishTaskEvent('task.assigned', { ...task.request, id: taskId });
     return task;
   }
 
-  /**
-   * 开始执行任务
-   */
+  /** 开始执行 */
   startTask(taskId: string): Task | null {
     const task = this.tasks.get(taskId);
-    if (!task) {
-      return null;
-    }
+    if (!task) return null;
 
     task.status = 'running';
     task.updatedAt = Date.now();
+    this._save(task);
 
-    eventBus.publishTaskEvent('task.started', {
-      ...task.request,
-      id: taskId
-    });
-
+    eventBus.publishTaskEvent('task.started', { ...task.request, id: taskId });
     return task;
   }
 
-  /**
-   * 完成任务
-   */
+  /** 完成任务 */
   completeTask(taskId: string, result: unknown): Task | null {
     const task = this.tasks.get(taskId);
-    if (!task) {
-      return null;
-    }
+    if (!task) return null;
 
     task.status = 'completed';
     task.result = result;
     task.updatedAt = Date.now();
+    this._save(task);
+    this.controllers.delete(taskId);
 
-    eventBus.publishTaskEvent('task.completed', {
-      ...task.request,
-      id: taskId,
-      result
-    });
-
+    eventBus.publishTaskEvent('task.completed', { ...task.request, id: taskId, result });
     return task;
   }
 
-  /**
-   * 任务失败
-   */
+  /** 任务失败 */
   failTask(taskId: string, error: Error): Task | null {
     const task = this.tasks.get(taskId);
-    if (!task) {
-      return null;
-    }
+    if (!task) return null;
 
     task.status = 'failed';
     task.error = error;
     task.updatedAt = Date.now();
+    this._save(task);
+    this.controllers.delete(taskId);
 
-    eventBus.publishTaskEvent('task.failed', {
-      ...task.request,
-      id: taskId,
-      error
-    });
-
+    eventBus.publishTaskEvent('task.failed', { ...task.request, id: taskId, error });
     return task;
   }
 
-  /**
-   * 获取任务
-   */
+  /** 取消任务 */
+  cancelTask(taskId: string): boolean {
+    const task = this.tasks.get(taskId);
+    if (!task) return false;
+
+    // 只能取消 pending/running 状态的任务
+    if (task.status !== 'pending' && task.status !== 'assigned' && task.status !== 'running') {
+      return false;
+    }
+
+    const ctrl = this.controllers.get(taskId);
+    if (ctrl) {
+      ctrl.abort();
+      this.controllers.delete(taskId);
+    }
+
+    task.status = 'failed';
+    task.error = { code: 'CANCELLED', message: 'Task cancelled by user' };
+    task.updatedAt = Date.now();
+    this._save(task);
+
+    eventBus.publishTaskEvent('task.failed', {
+      ...task.request, id: taskId,
+      error: task.error,
+    });
+
+    return true;
+  }
+
+  /** 获取任务的 AbortSignal */
+  getSignal(taskId: string): AbortSignal | undefined {
+    return this.controllers.get(taskId)?.signal;
+  }
+
   getTask(taskId: string): Task | undefined {
     return this.tasks.get(taskId);
   }
 
-  /**
-   * 获取所有任务
-   */
   getAllTasks(): Task[] {
-    return Array.from(this.tasks.values());
+    return Array.from(this.tasks.values()).sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  /**
-   * 处理任务
-   */
+  /** 清理已完成/失败的任务（内存 + 持久化） */
+  purgeCompleted(olderThanDays = 7): number {
+    if (!this.store) return 0;
+    const deletedIds = this.store.purgeCompleted(olderThanDays);
+    for (const id of deletedIds) {
+      this.tasks.delete(id);
+      this.controllers.delete(id);
+    }
+    return deletedIds.length;
+  }
+
+  /** 处理任务 */
   async processTask(message: AgentMessage): Promise<Task> {
-    // 1. 创建任务
     const task = await this.createTask(message);
 
-    // 2. 如果有共享空间，添加消息到上下文
     if (message.payload?.context?.shared_space_id) {
-      await contextManager.addMessage(
-        message.payload.context.shared_space_id,
-        message
-      );
+      await contextManager.addMessage(message.payload.context.shared_space_id, message);
     }
 
-    // 3. 路由任务到 Agent
     const { agentIds, strategy } = router.route(message);
 
     if (agentIds.length === 0) {
@@ -159,88 +172,67 @@ export class TaskManager {
       throw new Error('No available agents');
     }
 
-    // 4. 分配任务
     this.assignTask(task.id, agentIds);
     this.startTask(task.id);
 
-    // 5. 执行任务
     await this.executeTask(task, agentIds, strategy);
-
     return task;
   }
 
-  /**
-   * 执行任务
-   */
+  /** 执行任务 */
   private async executeTask(
     task: Task,
     agentIds: string[],
     strategy: 'direct' | 'broadcast'
   ): Promise<void> {
+    const signal = this.controllers.get(task.id)?.signal;
     const results: Record<string, unknown> = {};
 
     if (strategy === 'direct' && agentIds[0]) {
-      // 单 Agent 执行
       const agentId = agentIds[0]!;
       const adapter = agentRegistry.get(agentId);
 
       if (!adapter) {
-        this.failTask(task.id, {
-          code: 'AGENT_NOT_FOUND',
-          message: `Agent ${agentId} not found`
-        });
+        this.failTask(task.id, { code: 'AGENT_NOT_FOUND', message: `Agent ${agentId} not found` });
         return;
       }
 
       try {
         console.log(`[TaskManager] Executing task ${task.id} with agent ${agentId}`);
         const response = await adapter.invoke(task.request);
+        if (signal?.aborted) return;
         results[agentId] = response.result;
 
-        // 如果有共享空间，添加响应到上下文
         if (task.request.payload?.context?.shared_space_id) {
-          await contextManager.addMessage(
-            task.request.payload.context.shared_space_id,
-            response
-          );
+          await contextManager.addMessage(task.request.payload.context.shared_space_id, response);
         }
 
         this.completeTask(task.id, response.result);
       } catch (error: unknown) {
+        if (signal?.aborted) return;
         const errorMessage = error instanceof Error ? error.message : String(error);
-        this.failTask(task.id, {
-          code: 'EXECUTION_ERROR',
-          message: errorMessage
-        });
+        this.failTask(task.id, { code: 'EXECUTION_ERROR', message: errorMessage });
       }
     } else {
-      // 广播模式：多个 Agent 同时执行
       const promises = agentIds.map(async (agentId) => {
+        if (signal?.aborted) return;
         const adapter = agentRegistry.get(agentId);
-        if (!adapter) {
-          results[agentId] = { error: `Agent ${agentId} not found` };
-          return;
-        }
+        if (!adapter) { results[agentId] = { error: `Agent ${agentId} not found` }; return; }
 
         try {
           const response = await adapter.invoke(task.request);
           results[agentId] = response.result;
 
-          // 添加响应到上下文
           if (task.request.payload?.context?.shared_space_id) {
-            await contextManager.addMessage(
-              task.request.payload.context.shared_space_id,
-              response
-            );
+            await contextManager.addMessage(task.request.payload.context.shared_space_id, response);
           }
         } catch (error: unknown) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          results[agentId] = { error: errorMessage };
+          results[agentId] = { error: error instanceof Error ? error.message : String(error) };
         }
       });
 
       await Promise.all(promises);
-      this.completeTask(task.id, results);
+      if (!signal?.aborted) this.completeTask(task.id, results);
     }
   }
 }

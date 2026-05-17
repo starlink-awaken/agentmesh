@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import { Router } from '../../src/core/router.js';
-import type { Agent, RoutingRule, AgentMessage } from '../../src/types/index.js';
+import type { Agent, AgentMessage } from '../../src/types/index.js';
+import type { RoutingRule } from '../../src/core/config.js';
 
 function makeAgent(id: string, caps: string[], status: Agent['status'] = 'online'): Agent {
   return { id, name: `Agent ${id}`, type: 'process', capabilities: caps, status, lastSeen: Date.now() };

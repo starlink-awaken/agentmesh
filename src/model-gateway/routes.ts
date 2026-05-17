@@ -17,7 +17,7 @@ function logReq(originalModel: string, providerName: string, actualModel: string
 
 export async function modelGatewayRoutes(fastify: FastifyInstance) {
   // 健康检查 + 配额总览
-  fastify.get('/model-gateway/health', async (_req: FastifyRequest, _reply: FastifyReply) => {
+  fastify.get('/v1/model-gateway/health', async (_req: FastifyRequest, _reply: FastifyReply) => {
     const quota = await probeQuota();
     return {
       status: 'ok',
@@ -32,7 +32,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
   });
 
   // 配额详情
-  fastify.get('/model-gateway/quota', async (_req: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/v1/model-gateway/quota', async (_req: FastifyRequest, reply: FastifyReply) => {
     await probeQuota();
     reply.send(getQuotaSummary());
   });
@@ -181,12 +181,12 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
   });
 
   // 运行时统计
-  fastify.get('/model-gateway/stats', async (_request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/v1/model-gateway/stats', async (_request: FastifyRequest, reply: FastifyReply) => {
     reply.send(getMetrics());
   });
 
   // Provider 健康检查 + 熔断器状态
-  fastify.get('/model-gateway/health/:provider', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/v1/model-gateway/health/:provider', async (request: FastifyRequest, reply: FastifyReply) => {
     const { provider } = request.params as { provider: string };
     const cfg = getConfig();
     if (!cfg || !cfg.providers[provider]) {
@@ -201,7 +201,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
   });
 
   // 全部 Provider 健康检查
-  fastify.get('/model-gateway/health/all', async (_request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/v1/model-gateway/health/all', async (_request: FastifyRequest, reply: FastifyReply) => {
     const cfg = getConfig();
     if (!cfg) return reply.code(503).send({ error: { message: 'Model gateway not configured' } });
     const results = await checkAllProviders(cfg);

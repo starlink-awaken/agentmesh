@@ -21,6 +21,11 @@ export class ContextManager {
     this.baseDir = baseDir;
   }
 
+  /** 从配置中更新存储路径 */
+  configure(baseDir: string): void {
+    this.baseDir = baseDir;
+  }
+
   /**
    * 创建共享空间
    */

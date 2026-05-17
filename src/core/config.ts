@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { parse } from 'yaml';
 import { join, dirname } from 'path';
+import type { ModelGatewayConfig } from '../model-gateway/types.js';
 
 export interface AgentConfig {
   id: string;
@@ -22,6 +23,24 @@ export interface RoutingRule {
   priority: number;
 }
 
+// YAML 默认配置使用 snake_case 与 gateway.yaml 匹配
+export interface ModelsSection extends ModelGatewayConfig {
+  defaults?: {
+    circuit_breaker?: {
+      failure_threshold?: number;
+      half_open_max_requests?: number;
+      reset_timeout_ms?: number;
+    };
+    retry?: {
+      base_delay_ms?: number;
+      max_delay_ms?: number;
+      max_retries?: number;
+      retryable_statuses?: number[];
+    };
+    rate_limit?: Record<string, { rpm?: number; enabled?: boolean }>;
+  };
+}
+
 export interface GatewayConfig {
   port: number;
   wsPort: number;
@@ -34,6 +53,7 @@ export interface GatewayConfig {
     rules: RoutingRule[];
   };
   agents: AgentConfig[];
+  models?: ModelsSection;
 }
 
 const DEFAULT_CONFIG: GatewayConfig = {

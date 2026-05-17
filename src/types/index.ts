@@ -68,23 +68,5 @@ export interface Task {
   updatedAt: number;
 }
 
-export interface RoutingRule {
-  name: string;
-  keywords: string[];
-  agent?: string;
-  strategy?: 'direct' | 'broadcast';
-  agents?: string[];
-  priority: number;
-}
-
-export interface GatewayConfig {
-  port: number;
-  wsPort: number;
-  host: string;
-  dataDir: string;
-  logDir: string;
-  routing: {
-    rules: RoutingRule[];
-    defaultAgent?: string;
-  };
-}
+// RoutingRule / GatewayConfig / AgentConfig 定义在 core/config.ts 中
+// 这里只保留通信协议类型

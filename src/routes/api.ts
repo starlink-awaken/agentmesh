@@ -4,18 +4,39 @@ import type { AgentMessage, Agent } from '../types/index.js';
 import { taskManager } from '../core/task-manager.js';
 import { router } from '../core/router.js';
 import { contextManager } from '../core/context-manager.js';
+import { vectorStore } from '../core/vector-store.js';
+import { circuitBreakerRegistry } from '../model-gateway/circuit-breaker.js';
+import { getGateway } from '../core/gateway.js';
 
 export async function apiRoutes(fastify: FastifyInstance) {
   // 健康检查
   fastify.get('/health', async (_request: FastifyRequest, _reply: FastifyReply) => {
+    const gw = getGateway();
+    if (gw) return { timestamp: Date.now(), ...gw.health() };
+
     return {
-      status: 'ok',
+      status: 'starting' as const,
       timestamp: Date.now(),
-      agents: router.getAllAgents().map(a => ({
-        id: a.id,
-        name: a.name,
-        status: a.status
-      }))
+      agents: router.getAllAgents().map(a => ({ id: a.id, name: a.name, status: a.status })),
+    };
+  });
+
+  // 详细健康检查
+  fastify.get('/health/detailed', async (_request: FastifyRequest, _reply: FastifyReply) => {
+    const gw = getGateway();
+    if (!gw) return { status: 'starting' as const, timestamp: Date.now() };
+
+    const health = gw.health();
+    return {
+      ...health,
+      circuit_breakers: circuitBreakerRegistry.getStatus(),
+      vector_store_available: vectorStore.isAvailable(),
+      config: {
+        port: gw.config.port,
+        log_level: gw.config.logLevel,
+        default_agent: gw.config.routing.defaultAgent,
+        model_providers: gw.config.models ? Object.keys(gw.config.models.providers || {}) : [],
+      },
     };
   });
 
@@ -90,8 +111,59 @@ export async function apiRoutes(fastify: FastifyInstance) {
       id: t.id,
       status: t.status,
       assigned_agents: t.assignedAgents,
-      created_at: t.createdAt
+      created_at: t.createdAt,
+      updated_at: t.updatedAt,
     })));
+  });
+
+  // 取消任务
+  fastify.post<{ Params: { taskId: string } }>(
+    '/tasks/:taskId/cancel',
+    async (request: FastifyRequest<{ Params: { taskId: string } }>, reply: FastifyReply) => {
+      const { taskId } = request.params;
+      const ok = taskManager.cancelTask(taskId);
+      if (!ok) {
+        reply.code(404).send({
+          error: { code: 'CANCEL_FAILED', message: 'Task not found or already completed' }
+        });
+        return;
+      }
+      reply.send({ task_id: taskId, status: 'cancelled' });
+    }
+  );
+
+  // 定时任务调度
+  fastify.post('/scheduler', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { name, cron, task } = (request.body || {}) as any;
+    if (!name || !cron || !task) {
+      return reply.code(400).send({ error: { code: 'MISSING_FIELDS', message: 'name, cron, and task are required' } });
+    }
+    const { scheduler } = await import('../core/scheduler.js');
+    const id = scheduler.add(name, cron, { id: '', type: 'request', source: 'api', target: 'gateway', correlation_id: '', timestamp: Date.now(), payload: { task } });
+    reply.code(201).send({ schedule_id: id, name, cron });
+  });
+
+  fastify.get('/scheduler', async (_req: FastifyRequest, reply: FastifyReply) => {
+    const { scheduler } = await import('../core/scheduler.js');
+    reply.send(scheduler.list().map(j => ({ id: j.id, name: j.name, cron: j.cron, enabled: j.enabled, last_run: j.lastRun, next_run: j.nextRun })));
+  });
+
+  fastify.delete('/scheduler/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const { scheduler } = await import('../core/scheduler.js');
+    if (!scheduler.remove(id)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Schedule not found' } });
+    reply.send({ status: 'removed' });
+  });
+
+  // Agent 协作流水线
+  fastify.post('/pipeline', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { steps, input } = (request.body || {}) as any;
+    if (!steps?.length || !input) {
+      return reply.code(400).send({ error: { code: 'MISSING_FIELDS', message: 'steps (array) and input (string) are required' } });
+    }
+    const { agentPipeline } = await import('../core/pipeline.js');
+    const result = await agentPipeline.execute(steps, input);
+    reply.send(result);
   });
 
   // 创建共享空间

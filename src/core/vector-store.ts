@@ -18,6 +18,11 @@ export class VectorStore {
     this.baseDir = baseDir;
   }
 
+  /** 从配置中更新存储路径 */
+  configure(baseDir: string): void {
+    this.baseDir = baseDir;
+  }
+
   /**
    * 初始化向量数据库
    */

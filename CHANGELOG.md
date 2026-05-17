@@ -1,6 +1,36 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [1.5.0] — 2026-05-17
+
+### Added
+- **GatewayContainer**: Unified DI lifecycle manager wrapping all core singletons (`init → reload → dispose`)
+- **Task Persistence**: bun:sqlite backend, WAL mode, tasks survive restarts
+- **Task Cancellation**: `POST /v1/tasks/:id/cancel` + `agentmesh cancel <id>`
+- **Agent Hot Reload**: edit `config/gateway.yaml`, agents auto-reload within 3s
+- **Web Dashboard**: `GET /dashboard` — real-time status with Dark theme, auto-refresh
+- **Scheduled Tasks**: cron-based scheduler via `POST /v1/scheduler` + cron-parser
+- **Agent Pipeline**: multi-agent sequential execution via `POST /v1/pipeline`
+- **Graceful Shutdown**: SIGTERM/SIGINT → dispose + fastify.close
+- **Detailed Health**: `GET /v1/health/detailed` with circuit breakers, config, uptime
+- **CLI Table Output**: Unicode box-drawing + ANSI colors for agents/tasks/models/health
+
+### Changed
+- **API Versioning**: All routes unified under `/v1/` prefix (model-gateway management included)
+- **Routes renamed**: `websocket.ts` → `sse.ts` (was always SSE, never WebSocket)
+- **Type cleanup**: Duplicate `GatewayConfig`/`RoutingRule` removed from types/index.ts
+- **Agent configs**: 25+ hardcoded defaults extracted to `src/core/agents.default.ts`
+- **Config injection**: `(config as any).models` replaced with typed `ModelsSection` + YAML→TS mapping
+- **Logger unified**: Pino bridge via `initLogger({ pino: fastify.log })`
+- **Error handling**: Global `setErrorHandler` + consistent `{error: {code, message}}` format
+- **Rate limiter**: Now configurable from YAML `models.defaults.rate_limit`
+- **Storage paths**: Derived from `config.dataDir` instead of hardcoded `./data/`
+- **cron-parser**: Replaces hand-rolled 40-line cron implementation
+
+### Fixed
+- `purgeCompleted` count overwrite bug when store is present
+- `startConfigWatcher` file watcher leak on dispose
+- `reloadAgents` unconditional re-registration of unchanged agents
+- `TaskManager` removes stale JSDoc cruft, uses single `_save()` path
 
 ## [1.2.0] — 2026-05-16
 

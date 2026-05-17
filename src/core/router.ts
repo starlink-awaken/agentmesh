@@ -1,4 +1,5 @@
-import type { Agent, RoutingRule, AgentMessage } from '../types/index.js';
+import type { Agent, AgentMessage } from '../types/index.js';
+import type { RoutingRule } from './config.js';
 
 export class Router {
   private rules: RoutingRule[] = [];

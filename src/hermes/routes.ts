@@ -36,7 +36,7 @@ export async function hermesRoutes(fastify: FastifyInstance) {
     const prompt = body.prompt || body.message || body.text || '';
 
     if (!prompt) {
-      return reply.code(400).send({ error: 'prompt or message is required' });
+      return reply.code(400).send({ error: { code: 'MISSING_PROMPT', message: 'prompt or message is required' } });
     }
 
     const taskId = body.id || uuidv4();
@@ -71,7 +71,7 @@ export async function hermesRoutes(fastify: FastifyInstance) {
   fastify.get('/hermes/task/:taskId', async (request: FastifyRequest, reply: FastifyReply) => {
     const { taskId } = request.params as { taskId: string };
     const task = tasks.get(taskId);
-    if (!task) return reply.code(404).send({ error: 'Task not found' });
+    if (!task) return reply.code(404).send({ error: { code: 'TASK_NOT_FOUND', message: 'Task not found' } });
     reply.send({
       task_id: task.id,
       status: task.status,

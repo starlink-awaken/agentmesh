@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
-import type { AgentMessage } from '../types/index.js';
 import { taskManager } from '../core/task-manager.js';
 import { agentRegistry } from '../core/agent-registry.js';
 
@@ -9,7 +8,7 @@ interface SSEClient {
   reply: any;
 }
 
-export async function websocketRoutes(fastify: FastifyInstance) {
+export async function sseRoutes(fastify: FastifyInstance) {
   const clients: Map<string, SSEClient> = new Map();
 
   // SSE 端点 - 用于实时任务更新
@@ -57,7 +56,7 @@ export async function websocketRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // WebSocket 模拟端点 - 返回 SSE 连接信息
+  // SSE 连接信息端点
   fastify.get('/ws-info', async (_request, reply) => {
     reply.send({
       message: 'Use /events for Server-Sent Events streaming',

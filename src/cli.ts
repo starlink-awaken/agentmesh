@@ -8,7 +8,7 @@ import { resolve, dirname, join } from 'node:path';
 import { initLogger } from './core/logger.js';
 
 const PROJECT_ROOT = resolve(dirname(import.meta.dir), '..');
-const VERSION = '1.4.1';
+const VERSION = '1.5.0';
 const BANNER = `
    █████╗  ██████╗ ███████╗███╗   ██╗████████╗
   ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
@@ -18,6 +18,20 @@ const BANNER = `
   ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝
   𝙼 𝙴 𝚂 𝙷    𝙶 𝙰 𝚃 𝙴 𝚆 𝙰 𝚈   v${VERSION}
 `;
+
+const C = { reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m', red: '\x1b[31m', green: '\x1b[32m', yellow: '\x1b[33m', cyan: '\x1b[36m' };
+const ICON = { ok: '✅', fail: '❌', warn: '⚠️', dot: '⚫' };
+const STATUS_ICON: Record<string, string> = { completed: '🎯', failed: '❌', running: '🔄', pending: '🕐', assigned: '⚫' };
+function table(headers: string[], rows: string[][]): string {
+  const widths = headers.map((h, i) => Math.max(h.length, ...rows.map(r => (r[i] || '').length)));
+  const sep = '─'.repeat(widths.reduce((a, b) => a + b, 0) + widths.length * 3 + 1);
+  let out = `╭${sep}╮\n│ ${headers.map((h, i) => C.bold + h.padEnd(widths[i]!) + C.reset).join(' │ ')} │\n├${sep}┤\n`;
+  for (const row of rows) {
+    out += `│ ${row.map((cell, i) => cell.padEnd(widths[i]!)).join(' │ ')} │\n`;
+  }
+  out += `╰${sep}╯`;
+  return out;
+}
 
 const BASE_URL = () => {
   const host = Bun.env.AGENT_GATEWAY_HOST || '127.0.0.1';
@@ -115,6 +129,7 @@ ${BANNER}
     quota                 查看配额状态
     agents                列出已注册 Agent
     tasks                 列出任务列表
+    cancel <id>           取消指定任务
 
   配置命令:
     config show           显示当前配置
@@ -153,10 +168,10 @@ async function cmdStart(args: string[]) {
   console.log(`${BANNER}
   🚀 Starting Agent Mesh Gateway...
   ═══════════════════════════════════════
-  HTTP:       http://${host}:${port}
-  Health:     http://${host}:${port}/health
+  API v1:     http://${host}:${port}/v1
+  Health:     http://${host}:${port}/v1/health
   Models:     http://${host}:${port}/v1/models
-  Quota:      http://${host}:${port}/model-gateway/quota
+  Quota:      http://${host}:${port}/v1/model-gateway/quota
   Docs:       http://${host}:${port}/docs
   ═══════════════════════════════════════
 `);
@@ -168,40 +183,41 @@ async function cmdStart(args: string[]) {
 
 async function cmdHealth() {
   try {
-    const data = await apiRequest<any>('/health');
-    console.log(`\n  ✅ Gateway Running`);
-    console.log(`  Status:     ${data.status}`);
-    console.log(`  Agents:     ${data.agents?.length || 0}`);
-    console.log(`  Timestamp:  ${new Date(data.timestamp).toISOString()}\n`);
+    const data = await apiRequest<any>('/v1/health');
+    console.log(`\n  ${C.green}${ICON.ok} Gateway Running${C.reset}`);
+    console.log(`  Status:    ${C.bold}${data.status}${C.reset}  Uptime: ${C.cyan}${data.uptime_seconds}s${C.reset}  Agents: ${C.green}${data.agents?.online || data.agents?.length || 0} online${C.reset} / ${data.agents?.total || data.agents?.length || 0} total`);
+    if (data.tasks) {
+      console.log(`  Tasks:     ${C.yellow}${data.tasks.pending}pending${C.reset}  ${C.cyan}${data.tasks.running}running${C.reset}  ${C.green}${data.tasks.completed}done${C.reset}  ${C.red}${data.tasks.failed}failed${C.reset}`);
+    }
+    console.log('');
   } catch (err: any) {
-    console.error(`\n  ❌ Gateway not reachable at ${BASE_URL()}`);
-    console.error(`  Error: ${err.message}`);
-    console.log(`\n  Start it with: agentmesh start\n`);
+    console.error(`\n  ${C.red}${ICON.fail} Gateway not reachable at ${BASE_URL()}${C.reset}`);
+    console.error(`  ${C.dim}Error: ${err.message}${C.reset}`);
+    console.log(`\n  Start it with: ${C.cyan}agentmesh start${C.reset}\n`);
   }
 }
 
 async function cmdModels() {
   try {
     const data = await apiRequest<any>('/v1/models');
-    console.log('\n  📋 Available Models:\n');
     const byProvider: Record<string, string[]> = {};
     for (const m of data.data || []) {
       (byProvider[m.owned_by] ??= []).push(m.id);
     }
+    const rows: string[][] = [];
     for (const [provider, models] of Object.entries(byProvider)) {
-      console.log(`  ${provider}:`);
-      models.forEach(m => console.log(`    - ${m}`));
-      console.log('');
+      rows.push([`${C.cyan}${provider}${C.reset}`, models.join(', ')]);
     }
+    console.log('\n  ' + table(['Provider', 'Models'], rows) + '\n');
   } catch (err: any) {
-    console.error(`\n  ❌ ${err.message}\n`);
+    console.error(`\n  ${C.red}${ICON.fail} ${err.message}${C.reset}\n`);
   }
 }
 
 async function cmdQuota() {
   try {
     console.log('\n  ⏳ Fetching quota data (may take ~15s)...');
-    const data = await apiRequest<any>('/model-gateway/quota', { signal: AbortSignal.timeout(60_000) });
+    const data = await apiRequest<any>('/v1/model-gateway/quota', { signal: AbortSignal.timeout(60_000) });
     console.log('\n  📊 Provider Quota Status:\n');
     if (!data || Object.keys(data).length === 0) {
       console.log('  No quota data available. Is codexbar installed?\n');
@@ -219,23 +235,42 @@ async function cmdQuota() {
 
 async function cmdAgents() {
   try {
-    const data = await apiRequest<any[]>('/agents');
-    console.log('\n  📋 Registered Agents:\n');
-    data.forEach(a => console.log(`  ${a.status === 'online' ? '🟢' : '⚫'} ${a.id.padEnd(18)} ${a.name.padEnd(22)} [${a.status}]\n     ${(a.capabilities || []).join(', ')}\n`));
+    const data = await apiRequest<any[]>('/v1/agents');
+    const rows = data.map(a => [
+      a.status === 'online' ? `${C.green}●${C.reset}` : `${C.dim}○${C.reset}`,
+      a.id,
+      a.name,
+      a.status,
+      (a.capabilities || []).slice(0, 3).join(', '),
+    ]);
+    console.log('\n  ' + table(['', 'ID', 'Name', 'Status', 'Capabilities (top 3)'], rows) + '\n');
   } catch (err: any) {
-    console.error(`\n  ❌ ${err.message}\n`);
+    console.error(`\n  ${C.red}${ICON.fail} ${err.message}${C.reset}\n`);
+  }
+}
+
+async function cmdCancel(taskId: string) {
+  try {
+    const data = await apiRequest<any>(`/v1/tasks/${taskId}/cancel`, { method: 'POST' });
+    console.log(`\n  ${C.green}${ICON.ok} Task ${data.task_id} cancelled${C.reset}\n`);
+  } catch (err: any) {
+    console.error(`\n  ${C.red}${ICON.fail} ${err.message}${C.reset}\n`);
   }
 }
 
 async function cmdTasks() {
   try {
-    const tasks = await apiRequest<any[]>('/tasks');
-    console.log('\n  📋 Tasks:\n');
-    if (!tasks.length) { console.log('  (none)\n'); return; }
-    tasks.forEach(t => console.log(`  ${t.id?.slice(0, 8)}...  ${t.status?.padEnd(10)} ${new Date(t.created_at).toLocaleString()}`));
-    console.log('');
+    const tasks = await apiRequest<any[]>('/v1/tasks');
+    if (!tasks.length) { console.log(`\n  ${C.dim}(no tasks)${C.reset}\n`); return; }
+    const rows = tasks.map(t => [
+      (STATUS_ICON[t.status] || ICON.dot) + ' ' + t.status,
+      t.id?.slice(0, 8) || '-',
+      String(t.assigned_agents?.length || 0),
+      new Date(t.created_at).toLocaleString(),
+    ]);
+    console.log('\n  ' + table(['Status', 'ID', 'Agents', 'Created'], rows) + '\n');
   } catch (err: any) {
-    console.error(`\n  ❌ ${err.message}\n`);
+    console.error(`\n  ${C.red}${ICON.fail} ${err.message}${C.reset}\n`);
   }
 }
 
@@ -264,9 +299,9 @@ async function cmdConfig(args: string[]) {
 async function cmdStatus() {
   try {
     const [health, models, stats] = await Promise.all([
-      apiRequest<any>('/health'),
+      apiRequest<any>('/v1/health'),
       apiRequest<any>('/v1/models').catch(() => ({ data: [] })),
-      apiRequest<any>('/model-gateway/stats').catch(() => null),
+      apiRequest<any>('/v1/model-gateway/stats').catch(() => null),
     ]);
     console.log(`
 ╔═══════════════════════════════════════════════════╗
@@ -338,7 +373,7 @@ async function cmdDoctor() {
 
   // Gateway status
   try {
-    await apiRequest('/health');
+    await apiRequest('/v1/health');
     console.log(`  ✅ Gateway              Running at ${BASE_URL()}`);
   } catch {
     console.log('  ⚠️ Gateway              Not running (start: agentmesh start)');
@@ -381,6 +416,9 @@ async function main() {
         await cmdAgents(); break;
       case 'tasks':
         await cmdTasks(); break;
+      case 'cancel':
+        if (!rest[0]) { console.error(`\n  ${C.red}Usage: agentmesh cancel <task-id>${C.reset}\n`); break; }
+        await cmdCancel(rest[0]); break;
       case 'config':
         await cmdConfig(rest); break;
       case 'connect': {

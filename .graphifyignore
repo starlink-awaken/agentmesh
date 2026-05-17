@@ -1,0 +1,8 @@
+data/tasks/
+.omc/
+dist/
+node_modules/
+Plans/
+bin/
+bun.lock
+.DS_Store
