@@ -79,11 +79,16 @@ export async function runRelease(level: string = 'patch') {
   console.log('  ✅ Pushed to GitHub');
 
   // 6. Publish to npm
-  console.log('  [6/6] Publish to npm...');
+  console.log('  [6/7] Publish to npm...');
   const pubOut = await sh(['npm', 'publish']);
   console.log(`  ✅ Published: ${pubOut}`);
 
-  console.log(`\n  🎉 v${newVer} released successfully!\n`);
+  // 7. Install latest globally
+  console.log('  [7/7] Install latest...');
+  await sh(['npm', 'install', '-g', `@starlink-awaken/agentmesh@${newVer}`]);
+  console.log('  ✅ Installed globally');
+
+  console.log(`\n  🎉 v${newVer} released & installed!\n`);
   return newVer;
 }
 
