@@ -428,6 +428,9 @@ async function main() {
         }
         break;
       }
+      case 'release':
+        const { runRelease } = await import('./cli/release.js');
+        await runRelease(rest[0] || 'patch'); break;
       case 'doctor': case 'check':
         await cmdDoctor(); break;
       default:
