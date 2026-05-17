@@ -56,10 +56,6 @@ export async function callChatCompletions(
   }
 }
 
-// ============================================================================
-// Responses API → Chat Completions 双向转换（含 tool_calls 往返）
-// ============================================================================
-
 export async function callResponsesApi(
   provider: ResolvedProvider,
   body: Record<string, any>
@@ -97,10 +93,6 @@ export async function callResponsesApi(
   });
 }
 
-// ============================================================================
-// 输入转换: Responses input[] → Chat messages[]
-// ============================================================================
-
 function convertInputToMessages(
   input: Array<Record<string, any>>
 ): Array<{ role: string; content: string | null; tool_calls?: any[]; tool_call_id?: string }> {
@@ -113,7 +105,6 @@ function convertInputToMessages(
         messages.push({ role: item.role || 'user', content: extractTextContent(item.content) });
         break;
 
-      // Function call（Assistant 侧发起工具调用）
       case 'function_call': {
         messages.push({
           role: 'assistant',
@@ -130,7 +121,6 @@ function convertInputToMessages(
         break;
       }
 
-      // Function call output（Tool 返回结果）
       case 'function_call_output':
         messages.push({
           role: 'tool',
@@ -139,7 +129,6 @@ function convertInputToMessages(
         });
         break;
 
-      // 简单角色
       case 'system':
         messages.push({ role: 'system', content: extractTextContent(item.content) });
         break;
@@ -151,7 +140,6 @@ function convertInputToMessages(
         break;
 
       default:
-        // 回退: role 字段
         if (item.role) {
           messages.push({ role: item.role, content: extractTextContent(item.content) });
         }
@@ -161,10 +149,6 @@ function convertInputToMessages(
   return messages;
 }
 
-// ============================================================================
-// 输出转换: Chat completions response → Responses API response
-// ============================================================================
-
 function convertChatToResponses(ccData: Record<string, any>): Record<string, any> {
   const choice = ccData.choices?.[0];
   if (!choice) {
@@ -173,7 +157,6 @@ function convertChatToResponses(ccData: Record<string, any>): Record<string, any
 
   const output: any[] = [];
 
-  // 文本回复
   if (choice.message?.content) {
     output.push({
       type: 'message',
@@ -182,7 +165,6 @@ function convertChatToResponses(ccData: Record<string, any>): Record<string, any
     });
   }
 
-  // 工具调用
   if (choice.message?.tool_calls) {
     for (const tc of choice.message.tool_calls) {
       output.push({
@@ -207,17 +189,14 @@ function convertChatToResponses(ccData: Record<string, any>): Record<string, any
   };
 }
 
-// ============================================================================
-// SSE 流式转换: Chat SSE → Responses SSE
-// ============================================================================
+const sseEncoder = new TextEncoder();
 
 function transformSSEStream(upstreamBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
   let buffer = '';
   let responseId = '';
   let modelName = '';
   let contentBuffer = '';
-  let toolCallAccum: Record<string, any> = {};
+  const toolCallAccum: Record<string, any> = {};
 
   return new ReadableStream({
     async start(controller) {
@@ -237,10 +216,9 @@ function transformSSEStream(upstreamBody: ReadableStream<Uint8Array>): ReadableS
             if (!line.startsWith('data: ')) continue;
             const data = line.slice(6).trim();
             if (data === '[DONE]') {
-              // 发送最终事件
               const finalEvt = buildResponseEvent(responseId, modelName, contentBuffer, toolCallAccum, true);
-              controller.enqueue(encoder.encode(finalEvt));
-              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              controller.enqueue(sseEncoder.encode(finalEvt));
+              controller.enqueue(sseEncoder.encode('data: [DONE]\n\n'));
               continue;
             }
 
@@ -251,17 +229,15 @@ function transformSSEStream(upstreamBody: ReadableStream<Uint8Array>): ReadableS
               const delta = chunk.choices?.[0]?.delta;
               if (!delta) continue;
 
-              // 文本增量
               if (delta.content) {
                 contentBuffer += delta.content;
                 const evt = `data: ${JSON.stringify({
                   type: 'response.output_text.delta',
                   delta: delta.content,
                 })}\n\n`;
-                controller.enqueue(encoder.encode(evt));
+                controller.enqueue(sseEncoder.encode(evt));
               }
 
-              // 工具调用增量
               if (delta.tool_calls) {
                 for (const tc of delta.tool_calls) {
                   if (!toolCallAccum[tc.index!]) {
@@ -283,11 +259,11 @@ function transformSSEStream(upstreamBody: ReadableStream<Uint8Array>): ReadableS
                   type: 'response.function_call_arguments.delta',
                   tool_calls: Object.values(toolCallAccum),
                 })}\n\n`;
-                controller.enqueue(encoder.encode(tcEvt));
+                controller.enqueue(sseEncoder.encode(tcEvt));
               }
             } catch {
               // 非 JSON 行直接透传
-              controller.enqueue(encoder.encode(line + '\n'));
+              controller.enqueue(sseEncoder.encode(line + '\n'));
             }
           }
         }
@@ -325,10 +301,6 @@ function buildResponseEvent(
   })}\n\n`;
 }
 
-// ============================================================================
-// 工具定义转换
-// ============================================================================
-
 function convertToolSchemas(tools: any[] | undefined): any[] | undefined {
   if (!tools || !Array.isArray(tools)) return undefined;
   return tools.map(t => ({
@@ -340,10 +312,6 @@ function convertToolSchemas(tools: any[] | undefined): any[] | undefined {
     },
   }));
 }
-
-// ============================================================================
-// 辅助函数
-// ============================================================================
 
 function extractTextContent(content: any): string {
   if (typeof content === 'string') return content;
