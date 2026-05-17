@@ -127,15 +127,19 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
     body.model = model;
     console.log(`[ModelGW:Responses] ${originalModel} → ${provider.name}/${model}`);
 
+    const reqStart2 = Date.now();
     try {
       const upstreamResp = await callResponsesApi(provider, body);
 
       if (!upstreamResp.ok) {
         const errText = await upstreamResp.text();
+        recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart2, status: upstreamResp.status, error: errText.slice(0, 200), streaming: !!body.stream });
         return reply.code(upstreamResp.status).send({
           error: { message: `${provider.name}: ${errText.slice(0, 500)}` },
         });
       }
+
+      recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart2, status: 200, streaming: !!body.stream });
 
       if (body.stream) {
         return reply.headers({
@@ -144,30 +148,10 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
         }).send(upstreamResp.body);
       }
 
-      // 将 Chat Completions 响应转回 Responses API 格式
-      const ccData = (await upstreamResp.json()) as Record<string, any>;
-      const choice = ccData.choices?.[0];
-      const responsesData = {
-        id: ccData.id,
-        object: 'response',
-        model: ccData.model,
-        output: [
-          {
-            type: 'message',
-            role: 'assistant',
-            content: [
-              {
-                type: 'output_text',
-                text: choice?.message?.content || '',
-              },
-            ],
-          },
-        ],
-        usage: ccData.usage,
-      };
-
-      reply.send(responsesData);
+      const data = await upstreamResp.json();
+      reply.send(data);
     } catch (err) {
+      recordRequest({ timestamp: Date.now(), model: originalModel, provider: provider.name, actualModel: model, latencyMs: Date.now() - reqStart2, status: 502, error: (err as Error).message, streaming: !!body.stream });
       console.error(`[ModelGW:Responses] Error:`, (err as Error).message);
       reply.code(502).send({
         error: { message: `Provider error: ${(err as Error).message}` },
