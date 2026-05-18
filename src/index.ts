@@ -148,3 +148,11 @@ async function main() {
 }
 
 main();
+/**
+ * AgentMesh — Multi-Agent Gateway & Scheduler
+ *
+ * Cross-project bridges:
+ * - agentmesh → agent-toolkit: shared agent capability layer
+ * - agentmesh → honeycomb: agent orchestration patterns
+ */
+
