@@ -1,0 +1,277 @@
+{
+  "/Volumes/Workspace/agentmesh/package.json": {
+    "mtime": 1778985696.6631985,
+    "ast_hash": "4babefd48958393169d2127d36189dce",
+    "semantic_hash": "4babefd48958393169d2127d36189dce"
+  },
+  "/Volumes/Workspace/agentmesh/tsconfig.json": {
+    "mtime": 1778739805.5134206,
+    "ast_hash": "da00556a6ef1024420a4d3ef4077ed4b",
+    "semantic_hash": "da00556a6ef1024420a4d3ef4077ed4b"
+  },
+  "/Volumes/Workspace/agentmesh/start.sh": {
+    "mtime": 1778936281.557782,
+    "ast_hash": "bc7c5ae9a074715f3f125d69199c204e",
+    "semantic_hash": "bc7c5ae9a074715f3f125d69199c204e"
+  },
+  "/Volumes/Workspace/agentmesh/tests/core/router.test.ts": {
+    "mtime": 1778939504.2040985,
+    "ast_hash": "15d2040ff98a8810edf5558865aa4702",
+    "semantic_hash": "15d2040ff98a8810edf5558865aa4702"
+  },
+  "/Volumes/Workspace/agentmesh/tests/core/context-manager.test.ts": {
+    "mtime": 1778939643.8606796,
+    "ast_hash": "532de02d3f36ca3b0cf0cb64e99618c2",
+    "semantic_hash": "532de02d3f36ca3b0cf0cb64e99618c2"
+  },
+  "/Volumes/Workspace/agentmesh/tests/model-gateway/retry.test.ts": {
+    "mtime": 1778940001.8351521,
+    "ast_hash": "3ecbaff42915cbc3b0017d1ead07b363",
+    "semantic_hash": "3ecbaff42915cbc3b0017d1ead07b363"
+  },
+  "/Volumes/Workspace/agentmesh/tests/model-gateway/router.test.ts": {
+    "mtime": 1778939644.1627429,
+    "ast_hash": "75303655dee7e2427b26589df1750750",
+    "semantic_hash": "75303655dee7e2427b26589df1750750"
+  },
+  "/Volumes/Workspace/agentmesh/tests/model-gateway/routes.test.ts": {
+    "mtime": 1778939711.6721318,
+    "ast_hash": "4b108ba9a0887a40737f68a4373c3066",
+    "semantic_hash": "4b108ba9a0887a40737f68a4373c3066"
+  },
+  "/Volumes/Workspace/agentmesh/tests/model-gateway/circuit-breaker.test.ts": {
+    "mtime": 1778940001.528689,
+    "ast_hash": "5cb65863640b093f3a6db8c4e4c30dfa",
+    "semantic_hash": "5cb65863640b093f3a6db8c4e4c30dfa"
+  },
+  "/Volumes/Workspace/agentmesh/tests/model-gateway/rate-limit.test.ts": {
+    "mtime": 1778940150.6242123,
+    "ast_hash": "ef819625b72e3e6f1d37f6cabcb25d1f",
+    "semantic_hash": "ef819625b72e3e6f1d37f6cabcb25d1f"
+  },
+  "/Volumes/Workspace/agentmesh/tests/model-gateway/providers.test.ts": {
+    "mtime": 1778940234.196007,
+    "ast_hash": "b1906d029839f41988e44d9d77f2c1c2",
+    "semantic_hash": "b1906d029839f41988e44d9d77f2c1c2"
+  },
+  "/Volumes/Workspace/agentmesh/tests/model-gateway/quota.test.ts": {
+    "mtime": 1778940233.9516692,
+    "ast_hash": "a327117eaaf2d8f3846f906f81f85010",
+    "semantic_hash": "a327117eaaf2d8f3846f906f81f85010"
+  },
+  "/Volumes/Workspace/agentmesh/src/cli.ts": {
+    "mtime": 1778986806.43997,
+    "ast_hash": "ca089d8adf59520dfec089385623dd10",
+    "semantic_hash": "ca089d8adf59520dfec089385623dd10"
+  },
+  "/Volumes/Workspace/agentmesh/src/index.ts": {
+    "mtime": 1778986693.3704205,
+    "ast_hash": "b18105406ce7bf1315ff7daf301f8f4f",
+    "semantic_hash": "b18105406ce7bf1315ff7daf301f8f4f"
+  },
+  "/Volumes/Workspace/agentmesh/src/types/index.ts": {
+    "mtime": 1778739805.513347,
+    "ast_hash": "33e40a01fe7345dfd62df0723e561629",
+    "semantic_hash": "33e40a01fe7345dfd62df0723e561629"
+  },
+  "/Volumes/Workspace/agentmesh/src/core/agent-registry.ts": {
+    "mtime": 1778739805.5124636,
+    "ast_hash": "555af0bc41517a1c5ca931b4dcbab185",
+    "semantic_hash": "555af0bc41517a1c5ca931b4dcbab185"
+  },
+  "/Volumes/Workspace/agentmesh/src/core/router.ts": {
+    "mtime": 1778739805.5128448,
+    "ast_hash": "7f0674b0171bdcc850da8bd6952a326b",
+    "semantic_hash": "7f0674b0171bdcc850da8bd6952a326b"
+  },
+  "/Volumes/Workspace/agentmesh/src/core/vector-store.ts": {
+    "mtime": 1778739805.5130167,
+    "ast_hash": "8341ea24a1e603cf3999e65331987394",
+    "semantic_hash": "8341ea24a1e603cf3999e65331987394"
+  },
+  "/Volumes/Workspace/agentmesh/src/core/task-manager.ts": {
+    "mtime": 1778739805.5129416,
+    "ast_hash": "7ddc623c4a84d4eb6888250f3cb3ca50",
+    "semantic_hash": "7ddc623c4a84d4eb6888250f3cb3ca50"
+  },
+  "/Volumes/Workspace/agentmesh/src/core/logger.ts": {
+    "mtime": 1778942543.995195,
+    "ast_hash": "bd76cbd308b409543dfc76893262227f",
+    "semantic_hash": "bd76cbd308b409543dfc76893262227f"
+  },
+  "/Volumes/Workspace/agentmesh/src/core/event-bus.ts": {
+    "mtime": 1778739805.5126805,
+    "ast_hash": "388db69b1e86138706a8ed242df1dcc9",
+    "semantic_hash": "388db69b1e86138706a8ed242df1dcc9"
+  },
+  "/Volumes/Workspace/agentmesh/src/core/config.ts": {
+    "mtime": 1778945421.5971262,
+    "ast_hash": "6d341d5d7f32987ac6ad13ae3e2e70ca",
+    "semantic_hash": "6d341d5d7f32987ac6ad13ae3e2e70ca"
+  },
+  "/Volumes/Workspace/agentmesh/src/core/context-manager.ts": {
+    "mtime": 1778739805.512604,
+    "ast_hash": "30fce5e316ee06475b1434a650bde501",
+    "semantic_hash": "30fce5e316ee06475b1434a650bde501"
+  },
+  "/Volumes/Workspace/agentmesh/src/cli/setup.ts": {
+    "mtime": 1778944075.2965822,
+    "ast_hash": "75f5ce656a7abdfe579f12b96d81bd26",
+    "semantic_hash": "75f5ce656a7abdfe579f12b96d81bd26"
+  },
+  "/Volumes/Workspace/agentmesh/src/cli/connect.ts": {
+    "mtime": 1778948439.0638316,
+    "ast_hash": "481eab1b6949915e5a013c197d8b1e67",
+    "semantic_hash": "481eab1b6949915e5a013c197d8b1e67"
+  },
+  "/Volumes/Workspace/agentmesh/src/cli/release.ts": {
+    "mtime": 1778985782.6179605,
+    "ast_hash": "fa33c286f0dc6db01694c2e0e7cf25b9",
+    "semantic_hash": "fa33c286f0dc6db01694c2e0e7cf25b9"
+  },
+  "/Volumes/Workspace/agentmesh/src/adapters/openclaw.ts": {
+    "mtime": 1778739805.5121992,
+    "ast_hash": "c3076aff70d216f3f66f380efd5378ce",
+    "semantic_hash": "c3076aff70d216f3f66f380efd5378ce"
+  },
+  "/Volumes/Workspace/agentmesh/src/adapters/base.ts": {
+    "mtime": 1778739805.512066,
+    "ast_hash": "2512c4b729c35616ba05ad6c27e2030b",
+    "semantic_hash": "2512c4b729c35616ba05ad6c27e2030b"
+  },
+  "/Volumes/Workspace/agentmesh/src/adapters/process.ts": {
+    "mtime": 1778739805.512294,
+    "ast_hash": "862c0ebdbf28a99a23d01b0e0f3558d1",
+    "semantic_hash": "862c0ebdbf28a99a23d01b0e0f3558d1"
+  },
+  "/Volumes/Workspace/agentmesh/src/adapters/claude-code.ts": {
+    "mtime": 1778739805.5121293,
+    "ast_hash": "f9e733ec70928447e7eccaa776b7234c",
+    "semantic_hash": "f9e733ec70928447e7eccaa776b7234c"
+  },
+  "/Volumes/Workspace/agentmesh/src/hermes/routes.ts": {
+    "mtime": 1778987331.3550763,
+    "ast_hash": "47a70ce991612e1e74e3742fec5b130b",
+    "semantic_hash": "47a70ce991612e1e74e3742fec5b130b"
+  },
+  "/Volumes/Workspace/agentmesh/src/routes/websocket.ts": {
+    "mtime": 1778739805.5132737,
+    "ast_hash": "c35f84b42c523a2fee42e0011c2393b7",
+    "semantic_hash": "c35f84b42c523a2fee42e0011c2393b7"
+  },
+  "/Volumes/Workspace/agentmesh/src/routes/api.ts": {
+    "mtime": 1778739805.513199,
+    "ast_hash": "ad5cfb6556b96b45c4303cbe8e811fc9",
+    "semantic_hash": "ad5cfb6556b96b45c4303cbe8e811fc9"
+  },
+  "/Volumes/Workspace/agentmesh/src/model-gateway/routes.ts": {
+    "mtime": 1778983794.2808428,
+    "ast_hash": "ecd49d2bfb7a125f10f8238e8e7d98f5",
+    "semantic_hash": "ecd49d2bfb7a125f10f8238e8e7d98f5"
+  },
+  "/Volumes/Workspace/agentmesh/src/model-gateway/router.ts": {
+    "mtime": 1778983507.8306875,
+    "ast_hash": "1badf9eacc5155d3079966f2286efac5",
+    "semantic_hash": "1badf9eacc5155d3079966f2286efac5"
+  },
+  "/Volumes/Workspace/agentmesh/src/model-gateway/circuit-breaker.ts": {
+    "mtime": 1778939797.4994836,
+    "ast_hash": "e12457bebe02b7cb49a9b84948165e67",
+    "semantic_hash": "e12457bebe02b7cb49a9b84948165e67"
+  },
+  "/Volumes/Workspace/agentmesh/src/model-gateway/providers.ts": {
+    "mtime": 1778982860.3585258,
+    "ast_hash": "cf272d6b358052fa4e5f3566f557da0a",
+    "semantic_hash": "cf272d6b358052fa4e5f3566f557da0a"
+  },
+  "/Volumes/Workspace/agentmesh/src/model-gateway/retry.ts": {
+    "mtime": 1778939799.1948652,
+    "ast_hash": "27983a29e4053253366a7c5fdd4befe2",
+    "semantic_hash": "27983a29e4053253366a7c5fdd4befe2"
+  },
+  "/Volumes/Workspace/agentmesh/src/model-gateway/types.ts": {
+    "mtime": 1778982828.9197047,
+    "ast_hash": "2f59a5f78ad27b7b730cff56b68fd218",
+    "semantic_hash": "2f59a5f78ad27b7b730cff56b68fd218"
+  },
+  "/Volumes/Workspace/agentmesh/src/model-gateway/quota.ts": {
+    "mtime": 1778937303.6486235,
+    "ast_hash": "dfca9c0af893d05588bb47814e1019ce",
+    "semantic_hash": "dfca9c0af893d05588bb47814e1019ce"
+  },
+  "/Volumes/Workspace/agentmesh/src/model-gateway/health.ts": {
+    "mtime": 1778942502.4673674,
+    "ast_hash": "3cc67f6f05cabbb3c7be4974696cbc0f",
+    "semantic_hash": "3cc67f6f05cabbb3c7be4974696cbc0f"
+  },
+  "/Volumes/Workspace/agentmesh/src/model-gateway/rate-limit.ts": {
+    "mtime": 1778940150.3030813,
+    "ast_hash": "b6a6658e7af43e90e4f17972d88e5be1",
+    "semantic_hash": "b6a6658e7af43e90e4f17972d88e5be1"
+  },
+  "/Volumes/Workspace/agentmesh/src/model-gateway/metrics.ts": {
+    "mtime": 1778982790.8239932,
+    "ast_hash": "cdaec7657c83982f6d8ab6cc8827ab0e",
+    "semantic_hash": "cdaec7657c83982f6d8ab6cc8827ab0e"
+  },
+  "/Volumes/Workspace/agentmesh/CODE_OF_CONDUCT.md": {
+    "mtime": 1778739805.5108247,
+    "ast_hash": "853fcacec1ebe87435262e4e47bde784",
+    "semantic_hash": "853fcacec1ebe87435262e4e47bde784"
+  },
+  "/Volumes/Workspace/agentmesh/CHANGELOG.md": {
+    "mtime": 1778942724.66346,
+    "ast_hash": "5b0a18e411921218a0cc1401cd4bdea9",
+    "semantic_hash": "5b0a18e411921218a0cc1401cd4bdea9"
+  },
+  "/Volumes/Workspace/agentmesh/README.md": {
+    "mtime": 1778739805.5112484,
+    "ast_hash": "f9c86a3ff3b525df0b8b28a2f8ed7c7d",
+    "semantic_hash": "f9c86a3ff3b525df0b8b28a2f8ed7c7d"
+  },
+  "/Volumes/Workspace/agentmesh/CONTRIBUTING.md": {
+    "mtime": 1778739805.510911,
+    "ast_hash": "8184066f905ba859254d94ac9488bee5",
+    "semantic_hash": "8184066f905ba859254d94ac9488bee5"
+  },
+  "/Volumes/Workspace/agentmesh/README.zh-CN.md": {
+    "mtime": 1778942901.1956894,
+    "ast_hash": "0471562588d07a61644c36f3c79ed15d",
+    "semantic_hash": "0471562588d07a61644c36f3c79ed15d"
+  },
+  "/Volumes/Workspace/agentmesh/docker-compose.yml": {
+    "mtime": 1778936620.810674,
+    "ast_hash": "2924ffe64fa42ec1350c59195ad9cd45",
+    "semantic_hash": "2924ffe64fa42ec1350c59195ad9cd45"
+  },
+  "/Volumes/Workspace/agentmesh/CLAUDE.md": {
+    "mtime": 1779007534.7555494,
+    "ast_hash": "10ea8d398aefa2d95f7201017db55929",
+    "semantic_hash": "10ea8d398aefa2d95f7201017db55929"
+  },
+  "/Volumes/Workspace/agentmesh/config/gateway.yaml": {
+    "mtime": 1778948735.6923532,
+    "ast_hash": "596814d274a7c8d0108541126b484a1d",
+    "semantic_hash": "596814d274a7c8d0108541126b484a1d"
+  },
+  "/Volumes/Workspace/agentmesh/docs/architecture.md": {
+    "mtime": 1778936986.8321373,
+    "ast_hash": "0f983b1246677c96e1085601ef7f0e21",
+    "semantic_hash": "0f983b1246677c96e1085601ef7f0e21"
+  },
+  "/Volumes/Workspace/agentmesh/docs/api.md": {
+    "mtime": 1778937160.2285895,
+    "ast_hash": "bc75fe8c134c15284281e931801a4909",
+    "semantic_hash": "bc75fe8c134c15284281e931801a4909"
+  },
+  "/Volumes/Workspace/agentmesh/docs/configuration.md": {
+    "mtime": 1778936989.3117046,
+    "ast_hash": "86eb11e962e7fef37f9ae236e4617424",
+    "semantic_hash": "86eb11e962e7fef37f9ae236e4617424"
+  },
+  "/Volumes/Workspace/agentmesh/.github/workflows/ci.yml": {
+    "mtime": 1778939584.7708323,
+    "ast_hash": "8a65065ea83bebaff211d087f7f2b3f5",
+    "semantic_hash": "8a65065ea83bebaff211d087f7f2b3f5"
+  }
+}

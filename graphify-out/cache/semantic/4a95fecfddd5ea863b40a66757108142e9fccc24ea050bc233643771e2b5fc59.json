@@ -1,0 +1,1 @@
+{"nodes": [], "edges": [{"source": "tests/model-gateway/providers.test.ts", "target": "responses_to_chat_adapter", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "tests/model-gateway/providers.test.ts", "source_location": null, "weight": 1.0}], "hyperedges": []}

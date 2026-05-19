@@ -1,0 +1,1 @@
+{"nodes": [], "edges": [{"source": "tests/model-gateway/routes.test.ts", "target": "model_gateway_routes", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "tests/model-gateway/routes.test.ts", "source_location": "line 3", "weight": 1.0}], "hyperedges": []}

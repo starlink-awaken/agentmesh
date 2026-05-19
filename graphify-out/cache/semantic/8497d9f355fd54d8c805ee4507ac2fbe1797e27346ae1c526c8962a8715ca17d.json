@@ -1,0 +1,1 @@
+{"nodes": [], "edges": [{"source": "tests/model-gateway/rate-limit.test.ts", "target": "rate_limiter", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "tests/model-gateway/rate-limit.test.ts", "source_location": "line 2", "weight": 1.0}], "hyperedges": []}

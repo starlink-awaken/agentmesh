@@ -1,0 +1,1 @@
+{"nodes": [], "edges": [{"source": "tests/model-gateway/circuit-breaker.test.ts", "target": "circuit_breaker_registry", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "tests/model-gateway/circuit-breaker.test.ts", "source_location": "line 2", "weight": 1.0}], "hyperedges": []}

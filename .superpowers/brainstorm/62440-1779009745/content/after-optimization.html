@@ -1,0 +1,85 @@
+<h2>架构优化完成 — 前后对比</h2>
+<p class="subtitle">8 项修复全部通过 typecheck + 122 tests pass</p>
+
+<div class="section">
+  <h3>修复清单</h3>
+  <table style="width:100%;border-collapse:collapse">
+    <tr style="background:var(--bg-secondary)"><th style="padding:8px;text-align:left">#</th><th>问题</th><th>修复方式</th><th>文件</th></tr>
+    <tr><td style="padding:8px;color:#22c55e">1</td><td style="padding:8px">类型重复定义</td><td style="padding:8px">GatewayConfig/RoutingRule 从 types/index.ts 移除，统一到 core/config.ts</td><td style="padding:8px;font-size:11px">types/index.ts, router.ts, router.test.ts</td></tr>
+    <tr><td style="padding:8px;color:#22c55e">2</td><td style="padding:8px">(config as any).models</td><td style="padding:8px">新增 ModelsSection 类型 + snake_case→camelCase 边界映射</td><td style="padding:8px;font-size:11px">config.ts, index.ts</td></tr>
+    <tr><td style="padding:8px;color:#22c55e">3</td><td style="padding:8px">websocket.ts 命名误导</td><td style="padding:8px">重命名为 sse.ts，函数→sseRoutes，删除旧文件</td><td style="padding:8px;font-size:11px">sse.ts(新), index.ts</td></tr>
+    <tr><td style="padding:8px;color:#22c55e">4</td><td style="padding:8px">两个 Logger 系统</td><td style="padding:8px">initLogger({ pino: fastify.log }) 桥接，统一输出</td><td style="padding:8px;font-size:11px">index.ts</td></tr>
+    <tr><td style="padding:8px;color:#22c55e">5</td><td style="padding:8px">硬编码存储路径</td><td style="padding:8px">ContextManager.configure() + VectorStore.configure() 从配置读取</td><td style="padding:8px;font-size:11px">context-manager.ts, vector-store.ts, index.ts</td></tr>
+    <tr><td style="padding:8px;color:#22c55e">6</td><td style="padding:8px">错误处理不统一</td><td style="padding:8px">Fastify setErrorHandler + 统一 {error: {code, message}} 格式</td><td style="padding:8px;font-size:11px">index.ts, hermes/routes.ts</td></tr>
+    <tr><td style="padding:8px;color:#22c55e">7</td><td style="padding:8px">API 无版本前缀</td><td style="padding:8px">apiRoutes/sseRoutes/hermesRoutes 挂载到 /v1/ 前缀</td><td style="padding:8px;font-size:11px">index.ts, cli.ts</td></tr>
+    <tr><td style="padding:8px;color:#22c55e">8</td><td style="padding:8px">25+ Agent 硬编码</td><td style="padding:8px">提取到 src/core/agents.default.ts，独立数据模块</td><td style="padding:8px;font-size:11px">agents.default.ts(新), agent-registry.ts</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>架构改善指标</h3>
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:150px;background:var(--bg-secondary);padding:16px;border-radius:8px;text-align:center">
+      <div style="font-size:32px;color:#22c55e">-200</div>
+      <div style="font-size:13px;color:var(--text-muted)">行硬编码数据</div>
+    </div>
+    <div style="flex:1;min-width:150px;background:var(--bg-secondary);padding:16px;border-radius:8px;text-align:center">
+      <div style="font-size:32px;color:#22c55e">-5</div>
+      <div style="font-size:13px;color:var(--text-muted)">处 as any 断言</div>
+    </div>
+    <div style="flex:1;min-width:150px;background:var(--bg-secondary);padding:16px;border-radius:8px;text-align:center">
+      <div style="font-size:32px;color:#22c55e">+1</div>
+      <div style="font-size:13px;color:var(--text-muted)">全局错误中间件</div>
+    </div>
+    <div style="flex:1;min-width:150px;background:var(--bg-secondary);padding:16px;border-radius:8px;text-align:center">
+      <div style="font-size:32px;color:#22c55e">2→1</div>
+      <div style="font-size:13px;color:var(--text-muted)">Logger 系统统一</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>待深入优化的架构议题</h3>
+  <div class="pros-cons">
+    <div class="cons">
+      <h4>架构级 (需更大幅度重构)</h4>
+      <ul>
+        <li><b>模块单例 → 依赖注入</b> — export const router/eventBus/agentRegistry 改为构造器注入</li>
+        <li><b>模型网关管理路由版本化</b> — /model-gateway/* → /v1/model-gateway/*</li>
+        <li><b>限流器可配置化</b> — 从硬编码改为 per-endpoint YAML 配置</li>
+        <li><b>ContextManager/VectorStore 延迟初始化</b> — 从模块加载时实例化改为 server 启动时</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>优化后的路由拓扑</h3>
+  <div class="mockup">
+    <div class="mockup-body">
+      <pre style="font-size:11px;line-height:1.5;text-align:left">
+  Fastify Server (Pino Logger)
+  │
+  ├── /v1/* (主 API)
+  │   ├── /v1/health          → apiRoutes
+  │   ├── /v1/tasks           → apiRoutes (CRUD)
+  │   ├── /v1/spaces          → apiRoutes (CRUD)
+  │   ├── /v1/agents          → apiRoutes (list/register)
+  │   ├── /v1/events          → sseRoutes (SSE stream)
+  │   ├── /v1/ws-info         → sseRoutes
+  │   ├── /v1/broadcast       → sseRoutes
+  │   ├── /v1/hermes/task     → hermesRoutes (webhook)
+  │   ├── /v1/hermes/task/:id → hermesRoutes
+  │   ├── /v1/hermes/health   → hermesRoutes
+  │   └── /v1/hermes/tasks    → hermesRoutes
+  │
+  ├── /v1/models              → modelGatewayRoutes (OpenAI 兼容)
+  ├── /v1/chat/completions    → modelGatewayRoutes (OpenAI 兼容)
+  ├── /v1/responses           → modelGatewayRoutes (Codex 兼容)
+  ├── /model-gateway/health   → modelGatewayRoutes (管理)
+  ├── /model-gateway/quota    → modelGatewayRoutes (管理)
+  └── /model-gateway/stats    → modelGatewayRoutes (管理)
+      </pre>
+    </div>
+  </div>
+</div>

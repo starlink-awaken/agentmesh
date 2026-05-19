@@ -1,0 +1,87 @@
+<h2>Agent Mesh Gateway — 当前架构全景 & 已识别问题</h2>
+<p class="subtitle">基于静态分析 + 知识图谱 (462节点/767边/18社区) 的架构审计</p>
+
+<div class="section">
+  <h3>社区拓扑</h3>
+  <div class="mockup">
+    <div class="mockup-body">
+      <pre style="font-size:11px;line-height:1.5;text-align:left">
+                         ┌──────────────────┐
+                         │  #15 CLI Entry    │
+                         │  Points (8)       │
+                         └────────┬─────────┘
+                                  │ calls
+              ┌───────────────────┼───────────────────┐
+              ▼                   ▼                   ▼
+   ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐
+   │ #1 CLI Connect    │  │ #6 Config    │  │ #7 Adapter Impl  │
+   │ Tool Adapters(56) │  │ System (27)  │  │ (13)             │
+   └──────────────────┘  └──────┬───────┘  └──────────────────┘
+                                │ imports/config
+              ┌─────────────────┼─────────────────┐
+              ▼                 ▼                  ▼
+   ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐
+   │ #2 Adapter Base   │  │ #12 Router   │  │ #11 Agent        │
+   │ + Config Types(37)│  │ (10)         │  │ Registry (13)    │
+   └──────────────────┘  └──────────────┘  └──────────────────┘
+              │                                     │
+              ▼                                     ▼
+   ┌──────────────────┐              ┌──────────────────┐
+   │ #10 Context      │              │ #0 Hermes + C.B. │
+   │ Manager (3)      │              │ (43)             │
+   └──────────────────┘              └──────────────────┘
+              │
+              ▼
+   ┌──────────────────┐
+   │ #14 Vector Store │
+   │ (9)              │
+   └──────────────────┘
+
+   ┌──────────────────────────────────────────────────────┐
+   │ 模型网关子系统                                         │
+   │ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────────────┐  │
+   │ │#8 Prov │ │#4 GW   │ │#0 C.B. │ │#6 Rate Limit   │  │
+   │ │Call(21)│ │Concept │ │(43)    │ │(27)            │  │
+   │ └────────┘ └────────┘ └────────┘ └────────────────┘  │
+   └──────────────────────────────────────────────────────┘
+      </pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>已识别问题 — 按严重程度</h3>
+
+  <div class="pros-cons">
+    <div class="cons">
+      <h4>🔴 结构性问题</h4>
+      <ul>
+        <li><b>重复类型定义</b> — GatewayConfig/RoutingRule/AgentConfig 在 src/types/index.ts 和 src/core/config.ts 中分别定义，字段不一致</li>
+        <li><b>(config as any).models</b> — 模型网关配置绕过类型系统，5+ 处 any 类型断言</li>
+        <li><b>websocket.ts 命名误导</b> — 文件是 SSE 实现，不是 WebSocket</li>
+        <li><b>两个 Logger 系统</b> — 自建 logger + Fastify Pino，不一致</li>
+      </ul>
+      <h4>🟡 设计问题</h4>
+      <ul>
+        <li><b>模块级单例</b> — export const router/eventBus/agentRegistry... 无法测试隔离</li>
+        <li><b>硬编码常量</b> — dataDir/logDir 散落多处，25+ Agent 配置硬编码在 agent-registry.ts</li>
+        <li><b>API 版本不一致</b> — /v1/ 只在模型网关上，主 API 无版本</li>
+        <li><b>错误处理不统一</b> — 无全局错误中间件，有的 try/catch 有的直接抛</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>社区健康度</h3>
+  <table style="width:100%;border-collapse:collapse">
+    <tr style="background:var(--bg-secondary)"><th style="padding:8px;text-align:left">社区</th><th>节点</th><th>内聚度</th><th>评估</th></tr>
+    <tr><td style="padding:8px">#0 Hermes + Circuit Breaker</td><td>43</td><td style="color:#ef4444">0.05</td><td>🚨 需拆分</td></tr>
+    <tr><td style="padding:8px">#10 Context Manager</td><td>3</td><td style="color:#22c55e">0.23</td><td>✅ 健康</td></tr>
+    <tr><td style="padding:8px">#15 CLI Entry Points</td><td>8</td><td style="color:#22c55e">0.29</td><td>✅ 健康</td></tr>
+    <tr><td style="padding:8px">#1 CLI Connect Adapters</td><td>56</td><td style="color:#ef4444">0.05</td><td>🚨 最大社区，需拆分</td></tr>
+    <tr><td style="padding:8px">#3 Package Metadata</td><td>37</td><td style="color:#ef4444">0.05</td><td>⚠️ AST 噪声</td></tr>
+    <tr><td style="padding:8px">#0 Hermes + Circuit Breaker</td><td>43</td><td style="color:#ef4444">0.05</td><td>🚨 职责混合</td></tr>
+  </table>
+  <p style="font-size:12px;color:var(--text-muted);margin-top:8px">内聚度 &lt;0.10 的社区通常混合了不相关概念，建议拆分。</p>
+</div>

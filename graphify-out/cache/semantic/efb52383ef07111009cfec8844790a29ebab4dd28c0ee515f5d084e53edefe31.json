@@ -1,0 +1,1 @@
+{"nodes": [], "edges": [{"source": "tests/model-gateway/quota.test.ts", "target": "quota_manager", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "tests/model-gateway/quota.test.ts", "source_location": null, "weight": 1.0}], "hyperedges": []}
