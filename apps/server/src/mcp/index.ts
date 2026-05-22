@@ -12,6 +12,7 @@ import {
 import type { LocalModelDiscoverer, ModelRegistry, ModelScheduler } from '@agentmesh/model-orchestrator';
 import type { TaskManager } from '@agentmesh/gateway';
 import type { SkillLoader, SkillController } from '@agentmesh/toolkit';
+import type { MetricsCollector } from '@agentmesh/engine';
 
 // ── 依赖注入 ──
 
@@ -22,6 +23,7 @@ export interface MCPServerDeps {
   taskManager?: TaskManager;
   skillLoader?: SkillLoader;
   skillController?: SkillController;
+  metricsCollector?: MetricsCollector;
 }
 
 // ── Tool 定义 ──
@@ -208,8 +210,22 @@ async function handleToolCall(
     case 'system_health':
       return json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), memory: process.memoryUsage() });
 
-    case 'system_metrics':
-      return json({ metric: args.metric || 'all', requests: { total: 0 }, info: 'MetricsCollector not yet connected' });
+    case 'system_metrics': {
+      const mc = deps?.metricsCollector;
+      if (!mc) return json({ metric: args.metric || 'all', info: 'MetricsCollector not connected' });
+      try {
+        const snap = mc.snapshot();
+        const metric = args.metric as string;
+        if (metric && metric !== 'all') {
+          const filtered: any = {};
+          if (metric === 'counter') filtered.counters = snap.counters;
+          else if (metric === 'latency') filtered.timers = snap.timers;
+          else if (metric === 'memory') filtered.gauges = snap.gauges;
+          return json(filtered);
+        }
+        return json(snap);
+      } catch (err: any) { return json({ error: err.message }); }
+    }
 
     default:
       throw new Error(`Unknown tool: ${name}`);
