@@ -1,0 +1,38 @@
+{
+  "name": "@agentmesh/gateway",
+  "version": "2.0.0",
+  "description": "Agent Mesh — Fastify-based multi-agent HTTP gateway",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "agentmesh": "bin/agentmesh"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/websocket": "^11.2.0",
+    "@agentmesh/core-types": "workspace:*",
+    "@agentmesh/toolkit": "workspace:*",
+    "chromadb": "^3.3.1",
+    "cron-parser": "^5.5.0",
+    "execa": "^9.6.1",
+    "fastify": "^5.7.4",
+    "pino": "^10.3.1",
+    "uuid": "^13.0.0",
+    "ws": "^8.19.0",
+    "yaml": "^2.8.2"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/uuid": "^11.0.0",
+    "@types/ws": "^8.18.1",
+    "bun-types": "^1.3.14"
+  }
+}

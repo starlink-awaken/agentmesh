@@ -1,0 +1,1695 @@
+/**
+ * Honeycomb P2.3 - DSL Compiler
+ *
+ * 实现 DSL 编译器，包括类型检查、代码生成和 Markdown 互转功能。
+ */
+
+import type * as FS from 'node:fs';
+import { readFileSync } from 'node:fs';
+
+import type {
+  AgentDefinition,
+  AgentLayer,
+  AgentType,
+  GovernanceConfig,
+} from '../types.js';
+
+import type {
+  AgentDSL,
+  CompileResult,
+  CompilerOptions,
+  DSLCall,
+  DSLDataType,
+  DSLError,
+  DSLExpression,
+  DSLGovernance,
+  DSLInput,
+  DSLMetadata,
+  DSLOutput,
+  DSLObjectType,
+  DSLStatement,
+  DSLTool,
+  ParseResult,
+  SourceLocation,
+  TypeError,
+} from './types.js';
+import type { RiskLevel } from '../types.js';
+
+// ============================================================
+// 函数签名注册表 (P1-337)
+// ============================================================
+
+/**
+ * 函数签名 - 定义函数的参数类型和返回类型
+ */
+interface FunctionSignature {
+  /** 函数名 */
+  name: string;
+  /** 参数类型列表（按位置） */
+  paramTypes: DSLDataType[];
+  /** 返回类型 */
+  returnType: DSLDataType;
+  /** 是否可变参数 */
+  isVariadic?: boolean;
+}
+
+/**
+ * 函数签名注册表 - 管理函数签名的注册和查询
+ *
+ * 用于支持 function_call 表达式的静态类型检查和返回类型推断。
+ * 通过注册函数签名，编译器可以在编译时验证函数调用参数类型，
+ * 并推断函数调用的返回类型。
+ */
+class FunctionSignatureRegistry {
+  /** 函数签名映射表 */
+  private signatures: Map<string, FunctionSignature> = new Map();
+
+  /**
+   * 注册函数签名
+   *
+   * @param name - 函数名
+   * @param paramTypes - 参数类型列表（按位置）
+   * @param returnType - 返回类型
+   * @param isVariadic - 是否可变参数（默认 false）
+   */
+  register(name: string, paramTypes: DSLDataType[], returnType: DSLDataType, isVariadic = false): void {
+    this.signatures.set(name, {
+      name,
+      paramTypes,
+      returnType,
+      isVariadic,
+    });
+  }
+
+  /**
+   * 查询函数签名
+   *
+   * @param name - 函数名
+   * @returns 函数签名，如果不存在则返回 undefined
+   */
+  lookup(name: string): FunctionSignature | undefined {
+    return this.signatures.get(name);
+  }
+
+  /**
+   * 检查函数是否已注册
+   *
+   * @param name - 函数名
+   * @returns 是否已注册
+   */
+  has(name: string): boolean {
+    return this.signatures.has(name);
+  }
+
+  /**
+   * 清空所有注册的函数签名
+   */
+  clear(): void {
+    this.signatures.clear();
+  }
+
+  /**
+   * 获取所有已注册的函数名
+   *
+   * @returns 函数名数组
+   */
+  getFunctionNames(): string[] {
+    return Array.from(this.signatures.keys());
+  }
+}
+
+// ============================================================
+// 类型检查器
+// ============================================================
+
+/**
+ * 作用域帧 - 表示单个作用域层级
+ */
+interface ScopeFrame {
+  /** 父作用域指针 */
+  parent: ScopeFrame | null;
+  /** 本作用域的符号表 */
+  symbols: Map<string, DSLDataType>;
+  /** 作用域类型 */
+  kind: 'global' | 'function' | 'loop' | 'conditional' | 'catch' | 'parallel';
+  /** 作用域嵌套深度 */
+  depth: number;
+}
+
+/**
+ * 作用域栈 - 管理嵌套作用域
+ */
+class ScopeStack {
+  private frames: ScopeFrame[] = [];
+
+  constructor() {
+    // 创建全局作用域
+    this.enter('global');
+  }
+
+  /** 进入新作用域 */
+  enter(kind: ScopeFrame['kind']): void {
+    const parent = this.frames.length > 0 ? this.frames[this.frames.length - 1] : null;
+    const depth = this.frames.length;
+
+    this.frames.push({
+      parent,
+      symbols: new Map(),
+      kind,
+      depth,
+    });
+  }
+
+  /** 离开当前作用域 */
+  leave(): void {
+    if (this.frames.length <= 1) {
+      throw new Error('Cannot leave global scope');
+    }
+    this.frames.pop();
+  }
+
+  /** 查找符号 - 从当前作用域向上查找 */
+  lookup(name: string): DSLDataType | undefined {
+    for (let i = this.frames.length - 1; i >= 0; i--) {
+      const frame = this.frames[i];
+      if (frame.symbols.has(name)) {
+        return frame.symbols.get(name);
+      }
+    }
+    return undefined;
+  }
+
+  /** 在当前作用域定义符号 */
+  define(name: string, type: DSLDataType): void {
+    const current = this.frames[this.frames.length - 1];
+    if (current.symbols.has(name)) {
+      // 检查是否遮蔽外层作用域
+      for (let i = this.frames.length - 2; i >= 0; i--) {
+        if (this.frames[i].symbols.has(name)) {
+          // 变量遮蔽 - 可以记录警告但不阻止
+          console.warn(`Variable '${name}' shadows outer scope variable`);
+          break;
+        }
+      }
+    }
+    current.symbols.set(name, type);
+  }
+
+  /** 检查符号是否已定义(含遮蔽检测) */
+  isDefined(name: string): boolean {
+    return this.lookup(name) !== undefined;
+  }
+
+  /** 获取当前作用域深度 */
+  get currentDepth(): number {
+    return this.frames.length - 1;
+  }
+}
+
+class TypeChecker {
+  private ast: AgentDSL;
+  private errors: TypeError[] = [];
+  private scopeStack: ScopeStack;
+  private undefinedVars: Set<string> = new Set();
+  /** 调用图 - 用于检测循环依赖 */
+  private callGraph: Map<string, Set<string>> = new Map();
+  /** 函数签名注册表 (P1-337) */
+  private functionRegistry: FunctionSignatureRegistry;
+
+  constructor(ast: AgentDSL) {
+    this.ast = ast;
+    this.scopeStack = new ScopeStack();
+    this.functionRegistry = new FunctionSignatureRegistry();
+    this.initializeBuiltinFunctions();
+  }
+
+  /**
+   * 初始化内置函数签名 (P1-337)
+   *
+   * 注册常用的内置函数，使其可以进行类型检查。
+   */
+  private initializeBuiltinFunctions(): void {
+    // 字符串函数
+    this.functionRegistry.register('toString', [{ kind: 'any' }], { kind: 'string' });
+    this.functionRegistry.register('toUpperCase', [{ kind: 'string' }], { kind: 'string' });
+    this.functionRegistry.register('toLowerCase', [{ kind: 'string' }], { kind: 'string' });
+    this.functionRegistry.register('trim', [{ kind: 'string' }], { kind: 'string' });
+    this.functionRegistry.register('split', [{ kind: 'string' }, { kind: 'string' }], { kind: 'array', item_type: { kind: 'string' } });
+
+    // 数组函数
+    this.functionRegistry.register('length', [{ kind: 'array', item_type: { kind: 'any' } }], { kind: 'number' });
+    this.functionRegistry.register('push', [{ kind: 'array', item_type: { kind: 'any' } }, { kind: 'any' }], { kind: 'number' });
+    this.functionRegistry.register('pop', [{ kind: 'array', item_type: { kind: 'any' } }], { kind: 'any' });
+
+    // 数学函数
+    this.functionRegistry.register('abs', [{ kind: 'number' }], { kind: 'number' });
+    this.functionRegistry.register('round', [{ kind: 'number' }], { kind: 'number' });
+    this.functionRegistry.register('floor', [{ kind: 'number' }], { kind: 'number' });
+    this.functionRegistry.register('ceil', [{ kind: 'number' }], { kind: 'number' });
+
+    // 类型检查函数
+    this.functionRegistry.register('isString', [{ kind: 'any' }], { kind: 'boolean' });
+    this.functionRegistry.register('isNumber', [{ kind: 'any' }], { kind: 'boolean' });
+    this.functionRegistry.register('isBoolean', [{ kind: 'any' }], { kind: 'boolean' });
+    this.functionRegistry.register('isArray', [{ kind: 'any' }], { kind: 'boolean' });
+    this.functionRegistry.register('isObject', [{ kind: 'any' }], { kind: 'boolean' });
+  }
+
+  /**
+   * 执行类型检查
+   */
+  check(): TypeError[] {
+    this.errors = [];
+    this.undefinedVars.clear();
+
+    // 1. 构建调用图
+    this.buildCallGraph();
+
+    // 2. 检测循环依赖
+    this.detectCircularDependencies();
+
+    // 3. 检查输入定义
+    this.checkInputs();
+
+    // 2. 检查输出定义
+    this.checkOutputs();
+
+    // 3. 检查工具定义
+    this.checkTools();
+
+    // 4. 检查能力定义
+    this.checkCapabilities();
+
+    // 5. 检查 Body 中的语句
+    this.checkBody();
+
+    // 6. 检查治理配置
+    this.checkGovernance();
+
+    return this.errors;
+  }
+
+  private checkInputs(): void {
+    const names = new Set<string>();
+
+    for (const input of this.ast.inputs) {
+      // 检查重复名称
+      if (names.has(input.name)) {
+        this.errors.push({
+          message: `Duplicate input name: ${input.name}`,
+          loc: input.loc || { file: '', line: 1, column: 1 },
+          expected_type: 'unique',
+          actual_type: 'duplicate',
+        });
+        continue;
+      }
+      names.add(input.name);
+
+      // 注册到作用域栈（同时注册带前缀和不带前缀的形式）
+      this.scopeStack.define(`input.${input.name}`, input.data_type);
+      this.scopeStack.define(input.name, input.data_type);
+
+      // 检查默认值类型
+      if (input.default) {
+        const defaultType = this.inferExpressionType(input.default);
+        if (!this.isTypeAssignable(input.data_type, defaultType)) {
+          this.errors.push({
+            message: `Default value type mismatch for input ${input.name}`,
+            loc: input.loc || { file: '', line: 1, column: 1 },
+            expected_type: this.typeToString(input.data_type),
+            actual_type: this.typeToString(defaultType),
+          });
+        }
+      }
+    }
+  }
+
+  private checkOutputs(): void {
+    const names = new Set<string>();
+
+    for (const output of this.ast.outputs) {
+      if (names.has(output.name)) {
+        this.errors.push({
+          message: `Duplicate output name: ${output.name}`,
+          loc: output.loc || { file: '', line: 1, column: 1 },
+          expected_type: 'unique',
+          actual_type: 'duplicate',
+        });
+      }
+      names.add(output.name);
+    }
+  }
+
+  private checkTools(): void {
+    const names = new Set<string>();
+
+    for (const tool of this.ast.tools) {
+      if (names.has(tool.name)) {
+        this.errors.push({
+          message: `Duplicate tool name: ${tool.name}`,
+          loc: tool.loc || { file: '', line: 1, column: 1 },
+          expected_type: 'unique',
+          actual_type: 'duplicate',
+        });
+      }
+      names.add(tool.name);
+    }
+  }
+
+  private checkCapabilities(): void {
+    const types = new Set<string>();
+
+    for (const cap of this.ast.capabilities) {
+      if (types.has(cap.capability_type)) {
+        this.errors.push({
+          message: `Duplicate capability type: ${cap.capability_type}`,
+          loc: cap.loc || { file: '', line: 1, column: 1 },
+          expected_type: 'unique',
+          actual_type: 'duplicate',
+        });
+      }
+      types.add(cap.capability_type);
+    }
+  }
+
+  private checkBody(): void {
+    for (const stmt of this.ast.body) {
+      this.checkStatement(stmt);
+    }
+  }
+
+  private checkStatement(stmt: DSLStatement): void {
+    switch (stmt.type) {
+      case 'step':
+        this.checkStep(stmt);
+        break;
+      case 'condition':
+        this.checkCondition(stmt);
+        break;
+      case 'loop':
+        this.checkLoop(stmt);
+        break;
+      case 'parallel':
+        this.checkParallel(stmt);
+        break;
+      case 'try_catch':
+        this.checkTryCatch(stmt);
+        break;
+    }
+  }
+
+  private checkStep(step: DSLStatement & { type: 'step' }): void {
+    // 检查输入绑定中的表达式
+    for (const [key, expr] of Object.entries(step.inputs)) {
+      // 首先检查表达式中的变量引用是否有效
+      this.checkExpressionVariables(expr);
+
+      // 获取表达式的类型
+      const exprType = this.inferExpressionType(expr);
+
+      // 如果表达式类型是 any 且我们发现了未定义的变量，跳过类型检查
+      // 因为错误已经由 checkExpressionVariables 报告了
+      if (exprType.kind === 'any' && this.hasUndefinedVariableInExpression(expr)) {
+        continue;
+      }
+
+      // 在 DSL 中，step 的 inputs 绑定应该与被调用的 agent 的输入类型匹配
+      // 由于我们无法知道被调用 agent 的输入类型，我们检查：
+      // 1. 如果 key 匹配当前 agent 的某个输入名，检查类型是否匹配
+      // 2. 否则，只检查表达式本身是否有效（类型一致性）
+      const matchingInput = this.ast.inputs.find(i => i.name === key);
+      if (matchingInput) {
+        // key 匹配一个已定义的输入，检查表达式类型是否匹配输入类型
+        if (!this.isTypeAssignable(matchingInput.data_type, exprType)) {
+          this.errors.push({
+            message: `Type mismatch in step input binding '${key}': expected ${this.typeToString(matchingInput.data_type)}, got ${this.typeToString(exprType)}`,
+            loc: (expr as any).loc || step.loc || { file: '', line: 1, column: 1 },
+            expected_type: this.typeToString(matchingInput.data_type),
+            actual_type: this.typeToString(exprType),
+          });
+        }
+      }
+    }
+
+    // 检查重试配置
+    if (step.retry) {
+      if (step.retry.max_attempts < 1) {
+        this.errors.push({
+          message: `Retry max_attempts must be at least 1, got ${step.retry.max_attempts}`,
+          loc: step.loc || { file: '', line: 1, column: 1 },
+          expected_type: 'number >= 1',
+          actual_type: 'number < 1',
+        });
+      }
+    }
+  }
+
+  private checkCondition(cond: DSLStatement & { type: 'condition' }): void {
+    // 检查条件表达式中的变量引用
+    this.checkExpressionVariables(cond.test);
+
+    // 检查条件表达式是布尔类型
+    const testType = this.inferExpressionType(cond.test);
+    if (!this.isTypeAssignable({ kind: 'boolean' }, testType) && testType.kind !== 'any') {
+      this.errors.push({
+        message: 'Condition test expression must be boolean',
+        loc: cond.test.loc || cond.loc || { file: '', line: 1, column: 1 },
+        expected_type: 'boolean',
+        actual_type: this.typeToString(testType),
+      });
+    }
+
+    // 检查 consequent 和 alternate
+    for (const stmt of cond.consequent) {
+      this.checkStatement(stmt);
+    }
+
+    if (cond.alternate) {
+      for (const stmt of cond.alternate) {
+        this.checkStatement(stmt);
+      }
+    }
+  }
+
+  private checkLoop(loop: DSLStatement & { type: 'loop' }): void {
+    // 进入循环作用域
+    this.scopeStack.enter('loop');
+
+    // 检查循环变量和集合
+    if (loop.variable) {
+      // 注册循环变量到当前作用域
+      this.scopeStack.define(loop.variable, { kind: 'any' });
+    }
+
+    if (loop.collection) {
+      this.checkExpressionVariables(loop.collection);
+      const collectionType = this.inferExpressionType(loop.collection);
+      if (collectionType.kind !== 'array' && collectionType.kind !== 'any') {
+        this.errors.push({
+          message: 'Loop collection must be an array',
+          loc: loop.collection.loc || loop.loc || { file: '', line: 1, column: 1 },
+          expected_type: 'array',
+          actual_type: this.typeToString(collectionType),
+        });
+      }
+    }
+
+    if (loop.test) {
+      this.checkExpressionVariables(loop.test);
+      const testType = this.inferExpressionType(loop.test);
+      if (!this.isTypeAssignable({ kind: 'boolean' }, testType) && testType.kind !== 'any') {
+        this.errors.push({
+          message: 'Loop test expression must be boolean',
+          loc: loop.test.loc || loop.loc || { file: '', line: 1, column: 1 },
+          expected_type: 'boolean',
+          actual_type: this.typeToString(testType),
+        });
+      }
+    }
+
+    // 检查循环体
+    for (const stmt of loop.body) {
+      this.checkStatement(stmt);
+    }
+
+    // 离开循环作用域
+    this.scopeStack.leave();
+  }
+
+  private checkParallel(parallel: DSLStatement & { type: 'parallel' }): void {
+    if (parallel.max_concurrency !== undefined && parallel.max_concurrency < 1) {
+      this.errors.push({
+        message: `max_concurrency must be at least 1, got ${parallel.max_concurrency}`,
+        loc: parallel.loc || { file: '', line: 1, column: 1 },
+        expected_type: 'number >= 1',
+        actual_type: 'number < 1',
+      });
+    }
+
+    // 为每个分支创建独立作用域
+    for (const branch of parallel.branches) {
+      this.scopeStack.enter('parallel');
+
+      // branch 是一个语句数组
+      for (const stmt of branch) {
+        this.checkStatement(stmt);
+      }
+
+      this.scopeStack.leave();
+    }
+  }
+
+  private checkTryCatch(tryCatch: DSLStatement & { type: 'try_catch' }): void {
+    // 检查 try 块
+    for (const stmt of tryCatch.try_block) {
+      this.checkStatement(stmt);
+    }
+
+    // 进入 catch 作用域
+    this.scopeStack.enter('catch');
+
+    // 注册 catch_variable 到符号表
+    if (tryCatch.catch_variable) {
+      this.scopeStack.define(tryCatch.catch_variable, { kind: 'any' });
+    }
+
+    // 检查 catch 块
+    if (tryCatch.catch_block) {
+      for (const stmt of tryCatch.catch_block) {
+        this.checkStatement(stmt);
+      }
+    }
+
+    // 离开 catch 作用域
+    this.scopeStack.leave();
+
+    // 检查 finally 块
+    if (tryCatch.finally_block) {
+      for (const stmt of tryCatch.finally_block) {
+        this.checkStatement(stmt);
+      }
+    }
+  }
+
+  private checkGovernance(): void {
+    const gov = this.ast.governance;
+
+    // 检查 max_retries
+    if (gov.max_retries < 0) {
+      this.errors.push({
+        message: `max_retries must be non-negative, got ${gov.max_retries}`,
+        loc: this.ast.loc || { file: '', line: 1, column: 1 },
+        expected_type: 'number >= 0',
+        actual_type: 'number < 0',
+      });
+    }
+
+    // 检查 token_budget
+    if (gov.token_budget < 0) {
+      this.errors.push({
+        message: `token_budget must be non-negative, got ${gov.token_budget}`,
+        loc: this.ast.loc || { file: '', line: 1, column: 1 },
+        expected_type: 'number >= 0',
+        actual_type: 'number < 0',
+      });
+    }
+  }
+
+  /**
+   * 检查表达式中的变量引用是否有效
+   * 如果发现未定义的变量，记录到 errors 中
+   */
+  private checkExpressionVariables(expr: DSLExpression): void {
+    switch (expr.type) {
+      case 'variable':
+        // 'input' 是一个特殊的内置对象，用于访问输入参数
+        if (expr.name === 'input') {
+          break; // input 是有效的，跳过检查
+        }
+
+        // 检查变量是否在作用域栈中
+        // 变量可以是 input.xxx 形式，或者是直接引用输入名
+        const qualifiedName = `input.${expr.name}`;
+        const isDefined = this.scopeStack.isDefined(qualifiedName) || this.scopeStack.isDefined(expr.name);
+
+        if (!isDefined) {
+          // 检查是否已经报告过这个未定义变量（避免重复报告）
+          const errorKey = `${expr.name}`;
+          if (!this.undefinedVars.has(errorKey)) {
+            this.undefinedVars.add(errorKey);
+            this.errors.push({
+              message: `Undefined variable: '${expr.name}'`,
+              loc: expr.loc || { file: '', line: 1, column: 1 },
+              expected_type: 'defined variable',
+              actual_type: 'undefined',
+            });
+          }
+        }
+        break;
+
+      case 'property_access':
+        // 检查属性访问的对象部分
+        const propAccessExpr = expr as any;
+
+        // 'input' 是一个特殊的内置对象，不需要检查其定义
+        if (propAccessExpr.object.type === 'variable' && propAccessExpr.object.name !== 'input') {
+          this.checkExpressionVariables(propAccessExpr.object);
+        }
+
+        // 如果对象是 'input'，检查属性是否存在
+        if (propAccessExpr.object.type === 'variable' && propAccessExpr.object.name === 'input') {
+          const propName = propAccessExpr.property;
+          const qualifiedPropName = `input.${propName}`;
+          if (!this.scopeStack.isDefined(qualifiedPropName) && !this.scopeStack.isDefined(propName)) {
+            const errorKey = `input.${propName}`;
+            if (!this.undefinedVars.has(errorKey)) {
+              this.undefinedVars.add(errorKey);
+              this.errors.push({
+                message: `Undefined variable: 'input.${propName}'`,
+                loc: expr.loc || { file: '', line: 1, column: 1 },
+                expected_type: 'defined input',
+                actual_type: 'undefined',
+              });
+            }
+          }
+        }
+        break;
+
+      case 'binary_op':
+        // 检查二元操作的左右操作数
+        const binOpExpr = expr as any;
+        this.checkExpressionVariables(binOpExpr.left);
+        this.checkExpressionVariables(binOpExpr.right);
+        break;
+
+      case 'unary_op':
+        // 检查一元操作的操作数
+        const unOpExpr = expr as any;
+        this.checkExpressionVariables(unOpExpr.operand);
+        break;
+
+      case 'function_call':
+        // 检查函数调用的参数
+        const funcCallExpr = expr as any;
+        if (funcCallExpr.arguments) {
+          for (const arg of funcCallExpr.arguments) {
+            this.checkExpressionVariables(arg);
+          }
+        }
+        break;
+
+      case 'template_string':
+        // 检查模板字符串中的表达式部分
+        const templateExpr = expr as any;
+        if (templateExpr.parts) {
+          for (const part of templateExpr.parts) {
+            if (typeof part === 'object' && part !== null) {
+              this.checkExpressionVariables(part);
+            }
+          }
+        }
+        break;
+
+      case 'literal':
+        // 字面量不需要检查
+        break;
+    }
+  }
+
+  /**
+   * 检查表达式中是否存在未定义的变量
+   */
+  private hasUndefinedVariableInExpression(expr: DSLExpression): boolean {
+    switch (expr.type) {
+      case 'variable':
+        // 'input' 是一个特殊的内置对象
+        if (expr.name === 'input') {
+          return false;
+        }
+        const qualifiedName = `input.${expr.name}`;
+        return !this.scopeStack.isDefined(qualifiedName) && !this.scopeStack.isDefined(expr.name);
+
+      case 'property_access':
+        const propAccessExpr = expr as any;
+        if (propAccessExpr.object.type === 'variable' && propAccessExpr.object.name === 'input') {
+          const propName = propAccessExpr.property;
+          const qualifiedPropName = `input.${propName}`;
+          return !this.scopeStack.isDefined(qualifiedPropName) && !this.scopeStack.isDefined(propName);
+        }
+        return this.hasUndefinedVariableInExpression(propAccessExpr.object);
+
+      case 'binary_op':
+        const binOpExpr = expr as any;
+        return this.hasUndefinedVariableInExpression(binOpExpr.left) ||
+               this.hasUndefinedVariableInExpression(binOpExpr.right);
+
+      case 'unary_op':
+        const unOpExpr = expr as any;
+        return this.hasUndefinedVariableInExpression(unOpExpr.operand);
+
+      case 'function_call':
+        const funcCallExpr = expr as any;
+        if (funcCallExpr.arguments) {
+          return funcCallExpr.arguments.some((arg: DSLExpression) => this.hasUndefinedVariableInExpression(arg));
+        }
+        return false;
+
+      case 'template_string':
+        const templateExpr = expr as any;
+        if (templateExpr.parts) {
+          return templateExpr.parts.some((part: string | DSLExpression) =>
+            typeof part === 'object' && part !== null ? this.hasUndefinedVariableInExpression(part) : false
+          );
+        }
+        return false;
+
+      case 'literal':
+        return false;
+
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * 推断表达式类型
+   */
+  private inferExpressionType(expr: DSLExpression): DSLDataType {
+    switch (expr.type) {
+      case 'literal':
+        if (expr.value === null) return { kind: 'any' };
+        if (typeof expr.value === 'string') return { kind: 'string' };
+        if (typeof expr.value === 'number') return { kind: 'number' };
+        if (typeof expr.value === 'boolean') return { kind: 'boolean' };
+        return { kind: 'any' };
+
+      case 'variable':
+        // 查找作用域栈
+        const sym = this.scopeStack.lookup(`input.${expr.name}`) || this.scopeStack.lookup(expr.name);
+        if (sym) return sym;
+        // 如果变量未定义，返回 any（调用者应该已经通过 checkExpressionVariables 报告错误）
+        return { kind: 'any' };
+
+      case 'property_access':
+        // 调用专门的属性访问类型推断方法
+        return this.inferPropertyAccessType(expr as any);
+
+      case 'binary_op':
+        // 二元操作的类型推断
+        const leftType = this.inferExpressionType((expr as any).left);
+        const rightType = this.inferExpressionType((expr as any).right);
+        const op = (expr as any).operator;
+
+        // 比较运算符返回布尔
+        if (['==', '!=', '<', '>', '<=', '>=', '&&', '||'].includes(op)) {
+          return { kind: 'boolean' };
+        }
+
+        // 算术运算符返回数字
+        if (['+', '-', '*', '/', '%'].includes(op)) {
+          if (leftType.kind === 'number' && rightType.kind === 'number') {
+            return { kind: 'number' };
+          }
+        }
+
+        return { kind: 'any' };
+
+      case 'unary_op':
+        const operandType = this.inferExpressionType((expr as any).operand);
+        if ((expr as any).operator === '!') {
+          return { kind: 'boolean' };
+        }
+        return operandType;
+
+      case 'function_call':
+        // P1-337: 使用函数签名注册表推断返回类型
+        const funcCall = expr as any;
+        const funcName = funcCall.callee || (funcCall.function as any)?.name;
+
+        if (funcName && this.functionRegistry.has(funcName)) {
+          const signature = this.functionRegistry.lookup(funcName);
+          if (signature) {
+            // 可选：验证参数类型
+            // if (funcCall.arguments) {
+            //   for (let i = 0; i < funcCall.arguments.length; i++) {
+            //     const argType = this.inferExpressionType(funcCall.arguments[i]);
+            //     const expectedType = signature.paramTypes[i] || { kind: 'any' };
+            //     if (!this.isTypeAssignable(expectedType, argType)) {
+            //       // 参数类型不匹配 - 可以记录警告或错误
+            //     }
+            //   }
+            // }
+            return signature.returnType;
+          }
+        }
+
+        // 未注册的函数返回 any
+        return { kind: 'any' };
+
+      case 'template_string':
+        return { kind: 'string' };
+
+      default:
+        return { kind: 'any' };
+    }
+  }
+
+  /**
+   * 推断对象属性访问的类型
+   */
+  private inferPropertyAccessType(expr: any): DSLDataType {
+    // 如果对象是 'input'，尝试从符号表中查找属性类型
+    if (expr.object.type === 'variable' && expr.object.name === 'input') {
+      const propName = expr.property;
+
+      // 查找 input.propName 的类型
+      // 首先尝试获取对象本身的类型
+      const objVarType = this.scopeStack.lookup('input');
+
+      if (objVarType && objVarType.kind === 'object') {
+        const objType = objVarType as any;
+
+        // 如果对象有properties定义，查找具体属性
+        if (objType.properties && objType.properties[propName]) {
+          return objType.properties[propName];
+        }
+      }
+
+      // 尝试查找 qualified name
+      const qualifiedPropName = `input.${propName}`;
+      const propType = this.scopeStack.lookup(qualifiedPropName);
+      if (propType) {
+        return propType;
+      }
+    }
+
+    // 对于嵌套属性访问 (如 obj.prop1.prop2)，递归推断
+    const objType = this.inferExpressionType(expr.object);
+
+    if (objType.kind === 'object') {
+      const objectType = objType as any;
+      if (objectType.properties && objectType.properties[expr.property]) {
+        return objectType.properties[expr.property];
+      }
+    }
+
+    // 无法推断具体类型，返回 any
+    return { kind: 'any' };
+  }
+
+  /**
+   * 检查类型是否可赋值 (P1-336: 增加联合类型支持)
+   *
+   * 实现类型兼容性检查，包括联合类型的特殊处理。
+   *
+   * 联合类型规则（参考 TypeScript 语义）：
+   * - A | B 可以赋值给 A | B | C（源类型是目标类型的子集）
+   * - A 可以赋值给 A | B（单个类型可以赋值给包含它的联合类型）
+   * - never 可以赋值给任何类型（底部类型）
+   * - 任何类型可以赋值给 any（顶部类型）
+   */
+  private isTypeAssignable(target: DSLDataType, source: DSLDataType): boolean {
+    // any 可以赋值给任何类型
+    if (target.kind === 'any') return true;
+    if (source.kind === 'any') return true;
+
+    // P1-336: 处理目标类型是联合类型的情况
+    if (target.kind === 'union') {
+      const targetUnion = target as any;
+      const targetTypes = targetUnion.types as DSLDataType[];
+
+      // 检查源类型是否可以赋值给联合类型中的任意一个成员
+      // 这意味着源类型必须是目标联合类型的子集
+      return targetTypes.some((targetType: DSLDataType) =>
+        this.isTypeAssignable(targetType, source)
+      );
+    }
+
+    // P1-336: 处理源类型是联合类型的情况
+    if (source.kind === 'union') {
+      const sourceUnion = source as any;
+      const sourceTypes = sourceUnion.types as DSLDataType[];
+
+      // 联合类型可以赋值给目标类型，当且仅当所有成员都可以赋值给目标类型
+      // 这是严格的类型检查：A | B 可以赋值给 C，只有当 A -> C 且 B -> C
+      return sourceTypes.every((sourceType: DSLDataType) =>
+        this.isTypeAssignable(target, sourceType)
+      );
+    }
+
+    // 相同类型
+    if (target.kind === source.kind) {
+      if (target.kind === 'array' && source.kind === 'array') {
+        // 递归检查数组元素类型
+        return this.isTypeAssignable(
+          (target as any).item_type,
+          (source as any).item_type
+        );
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 构建调用图 - 遍历所有step语句记录Agent调用
+   */
+  private buildCallGraph(): void {
+    const visitStatement = (stmt: DSLStatement) => {
+      if (stmt.type === 'step') {
+        const agentName = (stmt as any).agent || 'unknown';
+
+        if (!this.callGraph.has(this.ast.name)) {
+          this.callGraph.set(this.ast.name, new Set());
+        }
+        this.callGraph.get(this.ast.name)!.add(agentName);
+      } else if (stmt.type === 'condition') {
+        const cond = stmt as any;
+        cond.consequent.forEach(visitStatement);
+        if (cond.alternate) {
+          cond.alternate.forEach(visitStatement);
+        }
+      } else if (stmt.type === 'loop') {
+        (stmt as any).body.forEach(visitStatement);
+      } else if (stmt.type === 'parallel') {
+        (stmt as any).branches.forEach((branch: DSLStatement[]) => {
+          branch.forEach(visitStatement);
+        });
+      } else if (stmt.type === 'try_catch') {
+        const tryCatch = stmt as any;
+        tryCatch.try_block.forEach(visitStatement);
+        if (tryCatch.catch_block) {
+          tryCatch.catch_block.forEach(visitStatement);
+        }
+        if (tryCatch.finally_block) {
+          tryCatch.finally_block.forEach(visitStatement);
+        }
+      }
+    };
+
+    for (const stmt of this.ast.body) {
+      visitStatement(stmt);
+    }
+  }
+
+  /**
+   * 使用DFS检测循环依赖
+   */
+  private detectCircularDependencies(): void {
+    const visited = new Set<string>();
+    const recursionStack = new Set<string>();
+
+    const dfs = (node: string): boolean => {
+      if (recursionStack.has(node)) {
+        // 发现环
+        this.errors.push({
+          message: `Circular dependency detected involving agent: ${node}`,
+          loc: this.ast.loc || { file: '', line: 1, column: 1 },
+          expected_type: 'acyclic graph',
+          actual_type: 'cyclic graph',
+        });
+        return true;
+      }
+
+      if (visited.has(node)) {
+        return false;
+      }
+
+      visited.add(node);
+      recursionStack.add(node);
+
+      const neighbors = this.callGraph.get(node);
+      if (neighbors) {
+        for (const neighbor of neighbors) {
+          if (dfs(neighbor)) {
+            return true;
+          }
+        }
+      }
+
+      recursionStack.delete(node);
+      return false;
+    };
+
+    // 从当前Agent开始检测
+    dfs(this.ast.name);
+  }
+
+  /**
+   * 类型转字符串
+   */
+  private typeToString(type: DSLDataType): string {
+    switch (type.kind) {
+      case 'string':
+      case 'number':
+      case 'boolean':
+      case 'any':
+      case 'void':
+        return type.kind;
+      case 'array':
+        return `array<${this.typeToString((type as any).item_type)}>`;
+      case 'object':
+        return 'object';
+      case 'union':
+        return `union<${(type as any).types.map((t: DSLDataType) => this.typeToString(t)).join(' | ')}>`;
+      case 'literal':
+        return `${typeof (type as any).value}`;
+      default:
+        return 'unknown';
+    }
+  }
+}
+
+// ============================================================
+// DSL Compiler 实现
+// ============================================================
+
+export interface DSLCompilerOptions extends CompilerOptions {
+  strict_type_checking?: boolean;
+  source_map?: boolean;
+  target?: 'markdown' | 'json' | 'executable';
+}
+
+export class DSLCompiler {
+  private options: DSLCompilerOptions;
+
+  constructor(options: DSLCompilerOptions = {}) {
+    this.options = {
+      strict_type_checking: false,
+      source_map: false,
+      target: 'markdown',
+      ...options,
+    };
+  }
+
+  // ============================================================
+  // 类型检查
+  // ============================================================
+
+  /**
+   * 对 AST 进行类型检查
+   *
+   * @param ast - DSL AST
+   * @returns 类型错误列表
+   */
+  typeCheck(ast: AgentDSL): TypeError[] {
+    const checker = new TypeChecker(ast);
+    return checker.check();
+  }
+
+  // ============================================================
+  // Markdown 转换
+  // ============================================================
+
+  /**
+   * 将 DSL AST 转换为 Markdown 格式
+   *
+   * @param ast - DSL AST
+   * @returns Markdown 字符串
+   */
+  toMarkdown(ast: AgentDSL): string {
+    const lines: string[] = [];
+
+    // Frontmatter
+    lines.push('---');
+    lines.push(`name: ${ast.name}`);
+
+    // description 使用单行格式（不带 | 符号）
+    const singleLineDesc = ast.description.replace(/\n/g, ' ').trim();
+    lines.push(`description: ${singleLineDesc}`);
+
+    if (ast.agent_type) {
+      lines.push(`agent_type: ${ast.agent_type}`);
+    }
+
+    if (ast.domain) {
+      lines.push(`domain: ${ast.domain}`);
+    }
+
+    // 工具列表 - 使用数组格式
+    if (ast.tools.length > 0) {
+      const toolsArray = ast.tools.map((t) => `'${t.name}'`).join(', ');
+      lines.push(`tools: [${toolsArray}]`);
+    } else {
+      lines.push('tools: []');
+    }
+
+    // argument-hint 从 metadata 保留，或从 inputs 推断
+    const argumentHint = ast.metadata?.argument_hint || (ast.inputs.length > 0 ? ast.inputs.map(i => i.name).join(', ') : '');
+    if (argumentHint) {
+      lines.push(`argument-hint: "${argumentHint}"`);
+    }
+
+    lines.push('---');
+    lines.push('');
+
+    // 标题
+    lines.push(`# ${this.toTitleCase(ast.name)}`);
+    lines.push('');
+
+    // 描述（如果有的话）
+    if (ast.description) {
+      lines.push(ast.description);
+      lines.push('');
+    }
+
+    // 输入输出说明
+    if (ast.inputs.length > 0) {
+      lines.push('## 输入参数');
+      lines.push('');
+      for (const input of ast.inputs) {
+        lines.push(`- \`${input.name}\` (${this.typeToString(input.data_type)}): ${input.description || 'N/A'}`);
+      }
+      lines.push('');
+    }
+
+    if (ast.outputs.length > 0) {
+      lines.push('## 输出');
+      lines.push('');
+      for (const output of ast.outputs) {
+        lines.push(`- \`${output.name}\` (${this.typeToString(output.data_type)}): ${output.description || 'N/A'}`);
+      }
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * 从 Markdown 转换为 DSL AST
+   *
+   * @param markdown - Markdown 字符串
+   * @param filepath - 文件路径（用于推断 Agent 层）
+   * @returns 解析结果
+   */
+  fromMarkdown(markdown: string, filepath?: string): ParseResult {
+    // 解析 frontmatter
+    const frontmatterMatch = markdown.match(/^---\n([\s\S]*?)\n---/);
+    if (!frontmatterMatch) {
+      return {
+        success: false,
+        errors: [
+          {
+            kind: 'syntax',
+            message: 'Missing frontmatter delimiters',
+            loc: {
+              file: filepath || '<unknown>',
+              line: 1,
+              column: 1,
+            },
+          },
+        ],
+      };
+    }
+
+    const frontmatter = frontmatterMatch[1];
+    const body = markdown.slice(frontmatterMatch[0].length).trim();
+
+    // 解析 frontmatter
+    const metadata = this.parseFrontmatter(frontmatter);
+
+    // 从文件路径推断层
+    const layer = this.inferLayerFromPath(filepath || '');
+
+    // 构建 metadata 对象，保留 argument_hint
+    const agentMetadata: DSLMetadata = {
+      ...(metadata.metadata || {}),
+      argument_hint: metadata.argument_hint,
+    };
+
+    // 构建 AgentDSL
+    const ast: AgentDSL = {
+      type: 'agent',
+      name: metadata.name || '',
+      description: metadata.description || '',
+      agent_type: metadata.agent_type || 'worker',
+      layer: layer,
+      domain: metadata.domain,
+      inputs: metadata.inputs || [],
+      outputs: metadata.outputs || [],
+      tools: metadata.tools || [],
+      capabilities: metadata.capabilities || [],
+      body: [], // 简化：Body 从 Markdown 难以解析，暂时为空
+      governance: metadata.governance || {
+        first_principles_check: true,
+        red_team_threshold: 'medium',
+        quality_gate_enabled: true,
+        max_retries: 3,
+        token_budget: 100000,
+      },
+      metadata: Object.keys(agentMetadata).length > 0 ? agentMetadata : undefined,
+      loc: {
+        file: filepath || '<unknown>',
+        line: 1,
+        column: 1,
+      },
+    };
+
+    return {
+      success: true,
+      ast,
+    };
+  }
+
+  // ============================================================
+  // 代码生成
+  // ============================================================
+
+  /**
+   * 编译 DSL 为可执行函数
+   * （当前版本返回占位实现）
+   */
+  compileToFunction(ast: AgentDSL): (input: unknown) => Promise<unknown> {
+    return async (input: unknown) => {
+      // 占位实现：实际版本应该生成真正的执行代码
+      return { agent: ast.name, input };
+    };
+  }
+
+  /**
+   * P0-8 修复：生成 TypeScript 类型定义（包含 JSDoc 注释）
+   *
+   * @param ast - DSL AST
+   * @returns TypeScript 代码
+   */
+  generateTypes(ast: AgentDSL): string {
+    const lines: string[] = [];
+
+    // P0-8 修复：添加文件级 JSDoc 注释
+    lines.push('/**');
+    lines.push(` * ${ast.name} - ${ast.description}`);
+    lines.push(' * 自动生成的类型定义，请勿手动编辑');
+    lines.push(' *');
+    lines.push(` * @generated`);
+    lines.push(` * @agentType ${ast.agent_type}`);
+    lines.push(` * @layer ${ast.layer}`);
+    if (ast.domain) {
+      lines.push(` * @domain ${ast.domain}`);
+    }
+    lines.push(' */');
+    lines.push('');
+
+    // 输入接口
+    lines.push(`/** ${ast.name} 的输入参数接口 */`);
+    lines.push(`export interface ${ast.name}Input {`);
+    for (const input of ast.inputs) {
+      const optional = input.required ? '' : '?';
+      // 为每个输入属性添加 JSDoc 注释
+      if (input.description) {
+        lines.push(`  /** ${input.description} */`);
+      }
+      lines.push(`  ${input.name}${optional}: ${this.typeToTypeScript(input.data_type)};`);
+    }
+    lines.push('}');
+    lines.push('');
+
+    // 输出接口
+    lines.push(`/** ${ast.name} 的输出结果接口 */`);
+    lines.push(`export interface ${ast.name}Output {`);
+    for (const output of ast.outputs) {
+      // 为每个输出属性添加 JSDoc 注释
+      if (output.description) {
+        lines.push(`  /** ${output.description} */`);
+      }
+      lines.push(`  ${output.name}: ${this.typeToTypeScript(output.data_type)};`);
+    }
+    lines.push('}');
+    lines.push('');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * P0-4 修复：生成 JSON Schema（包含 inputs 和 outputs）
+   *
+   * @param ast - DSL AST
+   * @returns JSON Schema 对象
+   */
+  generateJSONSchema(ast: AgentDSL): object {
+    const schema: Record<string, unknown> = {
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      title: ast.name,
+      description: ast.description,
+      type: 'object',
+      properties: {},
+    };
+
+    const required: string[] = [];
+
+    // 输入属性
+    if (ast.inputs.length > 0) {
+      (schema.properties as Record<string, unknown>).inputs = {
+        type: 'object',
+        properties: {},
+        required: [],
+      };
+
+      for (const input of ast.inputs) {
+        ((schema.properties as Record<string, unknown>).inputs as any).properties[input.name] =
+          this.dataTypeToJSONSchema(input.data_type);
+        if (input.required) {
+          ((schema.properties as Record<string, unknown>).inputs as any).required.push(input.name);
+        }
+      }
+    }
+
+    // P0-4 修复：添加 outputs 处理
+    if (ast.outputs.length > 0) {
+      (schema.properties as Record<string, unknown>).outputs = {
+        type: 'object',
+        properties: {},
+        required: [],
+      };
+
+      for (const output of ast.outputs) {
+        ((schema.properties as Record<string, unknown>).outputs as any).properties[output.name] =
+          this.dataTypeToJSONSchema(output.data_type);
+        // outputs 默认都是 required
+        ((schema.properties as Record<string, unknown>).outputs as any).required.push(output.name);
+      }
+    }
+
+    return schema;
+  }
+
+  /**
+   * 编译 DSL 为 AgentDefinition
+   *
+   * @param ast - DSL AST
+   * @returns AgentDefinition
+   */
+  compileToAgentDefinition(ast: AgentDSL): AgentDefinition {
+    return {
+      name: ast.name,
+      type: ast.agent_type,
+      layer: ast.layer,
+      domain: ast.domain,
+      description: ast.description,
+      prompt_path: '', // DSL 没有 prompt_path，需要生成临时文件
+      tools: ast.tools.map((t) => t.name),
+      capabilities: ast.capabilities.map((c) => c.capability_type),
+      argument_hint: '', // 可以从 inputs 推断
+      embedded_governance: this.convertGovernance(ast.governance),
+      context_shards: [],
+    };
+  }
+
+  /**
+   * 编译 DSL
+   *
+   * @param ast - DSL AST
+   * @param filepath - 文件路径
+   * @returns 编译结果
+   */
+  compile(ast: AgentDSL, filepath: string = '<unknown>'): CompileResult {
+    // 类型检查
+    const typeErrors = this.typeCheck(ast);
+
+    if (typeErrors.length > 0) {
+      return {
+        success: false,
+        errors: typeErrors.map((e) => ({
+          kind: 'type',
+          message: e.message,
+          loc: e.loc,
+        })),
+      };
+    }
+
+    // 根据目标格式生成输出
+    let output: string;
+
+    switch (this.options.target) {
+      case 'markdown':
+        output = this.toMarkdown(ast);
+        break;
+      case 'json':
+        output = JSON.stringify(ast, null, 2);
+        break;
+      case 'executable':
+        // 生成可执行代码（当前版本返回占位）
+        output = `// Agent: ${ast.name}\n// Executable code generation not yet implemented`;
+        break;
+      default:
+        output = this.toMarkdown(ast);
+    }
+
+    return {
+      success: true,
+      output,
+    };
+  }
+
+  // ============================================================
+  // 辅助方法
+  // ============================================================
+
+  private parseFrontmatter(frontmatter: string): Record<string, any> {
+    const result: Record<string, any> = {
+      tools: [],
+    };
+
+    const lines = frontmatter.split('\n');
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+      const colonIndex = line.indexOf(':');
+      if (colonIndex === -1) {
+        i++;
+        continue;
+      }
+
+      const key = line.slice(0, colonIndex).trim();
+      let value = line.slice(colonIndex + 1).trim();
+
+      // 处理多行值（以 | 或 > 开头）
+      let isMultiLine = false;
+      if (value === '|' || value === '>') {
+        // 收集后续缩进行
+        const multiLines: string[] = [];
+        i++;
+        while (i < lines.length) {
+          const nextLine = lines[i];
+          if (nextLine.startsWith('  ') || nextLine.startsWith('\t')) {
+            multiLines.push(nextLine.trim());
+            i++;
+          } else {
+            // 不满足缩进条件，回退 i 以便外层循环处理当前行
+            break;
+          }
+        }
+        value = multiLines.join(' ').trim();
+        // 多行值处理完成后，i 指向下一个需要处理的行
+        // 使用 continue 直接进入下一次循环，不执行下面的 i++
+        isMultiLine = true;
+      }
+
+      switch (key) {
+        case 'name':
+          result.name = value.replace(/^["']|["']$/g, '');
+          break;
+        case 'description':
+          result.description = value.replace(/^["']|["']$/g, '');
+          break;
+        case 'agent_type':
+          result.agent_type = value;
+          break;
+        case 'tools':
+          result.tools = this.parseToolsArray(value);
+          break;
+        case 'domain':
+          result.domain = value;
+          break;
+        case 'argument-hint':
+          result.argument_hint = value.replace(/^["']|["']$/g, '');
+          break;
+        default:
+          result[key] = value;
+      }
+
+      // 只有在非多行值的情况下才增加 i
+      // 多行值处理后 i 已经指向下一行
+      if (!isMultiLine) {
+        i++;
+      }
+    }
+
+    return result;
+  }
+
+  private parseArray(value: string): string[] {
+    // 移除方括号
+    const inner = value.replace(/^\[|\]$/g, '').trim();
+    if (!inner) return [];
+
+    // 简化处理：按逗号分割
+    return inner.split(',').map((s) => s.trim().replace(/^["']|["']$/g, ''));
+  }
+
+  /**
+   * 解析工具数组，转换为 DSLTool 格式
+   */
+  private parseToolsArray(value: string): DSLTool[] {
+    const toolNames = this.parseArray(value);
+    return toolNames.map((name) => ({
+      type: 'tool',
+      name,
+    }));
+  }
+
+  private inferLayerFromPath(filepath: string): AgentLayer {
+    const lowerPath = filepath.toLowerCase();
+
+    if (lowerPath.includes('layer-1-research') || lowerPath.includes('/l1/')) {
+      return 'L1';
+    } else if (lowerPath.includes('layer-2-decision') || lowerPath.includes('/l2/')) {
+      return 'L2';
+    } else if (lowerPath.includes('layer-3-execution') || lowerPath.includes('/l3/')) {
+      return 'L3';
+    } else if (lowerPath.includes('layer-4-feedback') || lowerPath.includes('/l4/')) {
+      return 'L4';
+    } else if (lowerPath.includes('governance')) {
+      return 'governance';
+    }
+
+    return 'L3'; // 默认为 L3
+  }
+
+  private toTitleCase(str: string): string {
+    return str
+      .split(/[-_]/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  private typeToString(type: DSLDataType): string {
+    switch (type.kind) {
+      case 'string':
+      case 'number':
+      case 'boolean':
+      case 'any':
+      case 'void':
+        return type.kind;
+      case 'array':
+        return `array<${this.typeToString((type as any).item_type)}>`;
+      case 'object':
+        return 'object';
+      case 'union':
+        return `union<${(type as any).types.map((t: DSLDataType) => this.typeToString(t)).join(' | ')}>`;
+      case 'literal':
+        return String((type as any).value);
+      default:
+        return 'unknown';
+    }
+  }
+
+  private typeToTypeScript(type: DSLDataType): string {
+    switch (type.kind) {
+      case 'string':
+        return 'string';
+      case 'number':
+        return 'number';
+      case 'boolean':
+        return 'boolean';
+      case 'any':
+        return 'any';
+      case 'void':
+        return 'void';
+      case 'array':
+        return `${this.typeToTypeScript((type as any).item_type)}[]`;
+      case 'object':
+        return 'Record<string, unknown>';
+      case 'union':
+        return (type as any).types.map((t: DSLDataType) => this.typeToTypeScript(t)).join(' | ');
+      case 'literal':
+        return typeof (type as any).value;
+      default:
+        return 'unknown';
+    }
+  }
+
+  /**
+   * P0-2 & P0-6: 将 DSL 数据类型转换为 JSON Schema
+   * 修复：any 类型返回符合规范的 schema，object 类型正确处理 properties
+   */
+  private dataTypeToJSONSchema(type: DSLDataType): object {
+    switch (type.kind) {
+      case 'string':
+        return { type: 'string' };
+      case 'number':
+        return { type: 'number' };
+      case 'boolean':
+        return { type: 'boolean' };
+      case 'any':
+        // P0-2 修复：any 类型应返回允许任意值的 JSON Schema
+        return {
+          additionalProperties: true,
+          additionalItems: true,
+        };
+      case 'void':
+        return { type: 'null' };
+      case 'array':
+        return {
+          type: 'array',
+          items: this.dataTypeToJSONSchema((type as any).item_type),
+        };
+      case 'object': {
+        // P0-6 修复：object 类型应处理 properties 定义
+        const objType = type as DSLObjectType;
+        const schema: Record<string, unknown> = {
+          type: 'object',
+        };
+
+        if (objType.properties && Object.keys(objType.properties).length > 0) {
+          // 如果有明确的属性定义，生成 properties 和 required
+          schema.properties = {};
+          const required: string[] = [];
+
+          for (const [propName, propType] of Object.entries(objType.properties)) {
+            (schema.properties as Record<string, unknown>)[propName] =
+              this.dataTypeToJSONSchema(propType);
+          }
+
+          if (required.length > 0) {
+            schema.required = required;
+          }
+        } else {
+          // 空对象类型，允许任意属性
+          schema.additionalProperties = true;
+        }
+
+        return schema;
+      }
+      case 'union':
+        return {
+          anyOf: (type as any).types.map((t: DSLDataType) => this.dataTypeToJSONSchema(t)),
+        };
+      case 'literal':
+        return {
+          type: typeof (type as any).value === 'string' ? 'string' :
+                 typeof (type as any).value === 'number' ? 'number' :
+                 typeof (type as any).value === 'boolean' ? 'boolean' : 'null',
+          const: (type as any).value,
+        };
+      default:
+        return {
+          additionalProperties: true,
+          additionalItems: true,
+        };
+    }
+  }
+
+  private convertGovernance(gov: DSLGovernance): GovernanceConfig {
+    return {
+      first_principles_check: gov.first_principles_check,
+      red_team_threshold: gov.red_team_threshold as RiskLevel,
+      quality_gate_enabled: gov.quality_gate_enabled,
+      max_retries: gov.max_retries,
+      token_budget: gov.token_budget,
+    };
+  }
+}
+
+// ============================================================
+// 类型导出（保持与测试文件一致）
+// ============================================================
+
+export type {
+  AgentDSL,
+  DSLInput,
+  DSLOutput,
+  DSLTool,
+  DSLStatement,
+  DSLStep,
+  SourceLocation,
+  ParseResult,
+  DSLError,
+  DSLDataType,
+  DSLExpression,
+  DSLGovernance,
+  DSLMetadata,
+  CompileResult,
+  TypeError,
+} from './types.js';

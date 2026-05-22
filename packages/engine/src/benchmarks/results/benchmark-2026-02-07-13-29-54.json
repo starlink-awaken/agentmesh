@@ -1,0 +1,789 @@
+{
+  "reportId": "bench-1770442193198-eb50b158",
+  "environment": {
+    "nodeVersion": "v24.3.0",
+    "bunVersion": "1.3.8",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpuCores": 12,
+    "totalMemoryMB": 2,
+    "timestamp": "2026-02-07T05:29:53.198Z"
+  },
+  "agentExecution": [
+    {
+      "type": "agent-execution",
+      "name": "Single Agent Execution",
+      "description": "执行单个 Agent 的平均时间 (100 个样本)",
+      "stats": {
+        "min": 0.0009160000000001389,
+        "max": 0.005666000000001503,
+        "avg": 0.0018370700000000894,
+        "median": 0.0018340000000023338,
+        "p95": 0.002736049999999322,
+        "p99": 0.0038097499999996836,
+        "samples": 100,
+        "stdDev": 0.0006186860796072672
+      },
+      "agentCount": 1,
+      "mode": "serial",
+      "throughput": {
+        "opsPerSecond": 544345.0712275261,
+        "totalOps": 100,
+        "totalDurationMs": 0.18370700000000895
+      },
+      "memory": {
+        "heapUsedMB": 0,
+        "heapTotalMB": 0,
+        "rssMB": 0,
+        "externalMB": 0
+      },
+      "passed": true,
+      "threshold": 10
+    },
+    {
+      "type": "agent-execution",
+      "name": "Serial Execution (10 agents)",
+      "description": "串行执行 10 个 Agent 的平均时间",
+      "stats": {
+        "min": 0.0013041000000001191,
+        "max": 0.0030584000000004608,
+        "avg": 0.0018402420000000392,
+        "median": 0.0017791500000001292,
+        "p95": 0.00238517500000011,
+        "p99": 0.0029664760000003196,
+        "samples": 50,
+        "stdDev": 0.0032927904767239484
+      },
+      "agentCount": 10,
+      "mode": "serial",
+      "throughput": {
+        "opsPerSecond": 543406.7910633377,
+        "totalOps": 500,
+        "totalDurationMs": 0.9201210000000195
+      },
+      "passed": true,
+      "threshold": 10
+    },
+    {
+      "type": "agent-execution",
+      "name": "Concurrent Execution (100 agents)",
+      "description": "并发执行 100 个 Agent 的平均时间",
+      "stats": {
+        "min": 0.000537920000000014,
+        "max": 0.0017983300000000214,
+        "avg": 0.0006813334999999974,
+        "median": 0.0006191699999999755,
+        "p95": 0.0007869790000000563,
+        "p99": 0.0015960598000000267,
+        "samples": 20,
+        "stdDev": 0.026010134160121757
+      },
+      "agentCount": 100,
+      "mode": "concurrent",
+      "throughput": {
+        "opsPerSecond": 1467710.0127910986,
+        "totalOps": 2000,
+        "totalDurationMs": 1.3626669999999947
+      },
+      "passed": true,
+      "threshold": 5000
+    },
+    {
+      "type": "agent-execution",
+      "name": "Agent Pool Loading (100 agents)",
+      "description": "加载 100 个 Agent 定义的时间",
+      "stats": {
+        "min": 1.4442920000000186,
+        "max": 7.489709000000005,
+        "avg": 2.5630616800000006,
+        "median": 1.7445829999999916,
+        "p95": 5.1628793500000025,
+        "p99": 7.358409090000002,
+        "samples": 50,
+        "stdDev": 1.4531184166505566
+      },
+      "agentCount": 100,
+      "mode": "serial",
+      "passed": true,
+      "threshold": 1000
+    },
+    {
+      "type": "agent-execution",
+      "name": "Agent Pool Queries (100 agents)",
+      "description": "执行 1000 次查询的平均时间",
+      "stats": {
+        "min": 0.0012369999999999948,
+        "max": 0.012215834000000002,
+        "avg": 0.0035147127000000043,
+        "median": 0.0023204375000000113,
+        "p95": 0.009077777449999998,
+        "p99": 0.011588222690000002,
+        "samples": 10,
+        "stdDev": 0.003164012484882703
+      },
+      "agentCount": 100,
+      "mode": "serial",
+      "throughput": {
+        "opsPerSecond": 284518.27655785315,
+        "totalOps": 10000,
+        "totalDurationMs": 35.14712700000004
+      },
+      "passed": true,
+      "threshold": 0.1
+    }
+  ],
+  "messageBus": [
+    {
+      "type": "message-bus",
+      "name": "Message Send Latency",
+      "description": "发送 10000 条消息的延迟 (10000 个样本)",
+      "stats": {
+        "min": 0.00008299999998939711,
+        "max": 0.12041700000000333,
+        "avg": 0.0002868115999999219,
+        "median": 0.00016699999997626946,
+        "p95": 0.0006659999999953925,
+        "p99": 0.001749999999987324,
+        "samples": 10000,
+        "stdDev": 0.001569170452215241
+      },
+      "messageCount": 10000,
+      "senderCount": 1,
+      "throughput": {
+        "opsPerSecond": 3486609.3282150105,
+        "totalOps": 10000,
+        "totalDurationMs": 2.868115999999219
+      },
+      "passed": true,
+      "threshold": 0.1
+    },
+    {
+      "type": "message-bus",
+      "name": "Throughput - Single Sender (10000 messages)",
+      "description": "单发送者发送 10000 条消息的吞吐量",
+      "stats": {
+        "min": 0.00008299999998939711,
+        "max": 0.02508400000002098,
+        "avg": 0.0002128888999999191,
+        "median": 0.00012499999999704414,
+        "p95": 0.0004590000000064265,
+        "p99": 0.001458000000013726,
+        "samples": 10000,
+        "stdDev": 0.0007911776882328103
+      },
+      "messageCount": 10000,
+      "senderCount": 1,
+      "throughput": {
+        "opsPerSecond": 4697285.767366828,
+        "totalOps": 10000,
+        "totalDurationMs": 2.128888999999191
+      },
+      "passed": true,
+      "threshold": 100000
+    },
+    {
+      "type": "message-bus",
+      "name": "Throughput - Multiple Senders (5 senders)",
+      "description": "5 个发送者，每人 2000 条消息的吞吐量",
+      "stats": {
+        "min": 0.000278449999999998,
+        "max": 0.000278449999999998,
+        "avg": 0.000278449999999998,
+        "median": 0.000278449999999998,
+        "p95": 0.000278449999999998,
+        "p99": 0.000278449999999998,
+        "samples": 1,
+        "stdDev": 0
+      },
+      "messageCount": 10000,
+      "senderCount": 5,
+      "throughput": {
+        "opsPerSecond": 3591309.0321422415,
+        "totalOps": 10000,
+        "totalDurationMs": 2.78449999999998
+      },
+      "passed": true,
+      "threshold": 50000
+    },
+    {
+      "type": "message-bus",
+      "name": "Subscribe Performance (100 subscribers)",
+      "description": "添加 100 个订阅者的平均时间",
+      "stats": {
+        "min": 0.00010041999999998552,
+        "max": 0.013164580000000115,
+        "avg": 0.00038472849999998297,
+        "median": 0.00012334000000009836,
+        "p95": 0.00035389599999987806,
+        "p99": 0.009583670799999921,
+        "samples": 100,
+        "stdDev": 0.001590543365588867
+      },
+      "messageCount": 100,
+      "senderCount": 1,
+      "passed": true,
+      "threshold": 0.01
+    },
+    {
+      "type": "message-bus",
+      "name": "Unsubscribe Performance (100 subscribers)",
+      "description": "取消 100 个订阅的平均时间",
+      "stats": {
+        "min": 0.000024169999999799074,
+        "max": 0.023701669999999807,
+        "avg": 0.00040617890000001466,
+        "median": 0.00008416500000009818,
+        "p95": 0.000781454999999994,
+        "p99": 0.002347775900000195,
+        "samples": 100,
+        "stdDev": 0.002358611795244759
+      },
+      "messageCount": 100,
+      "senderCount": 1,
+      "passed": true,
+      "threshold": 0.01
+    },
+    {
+      "type": "message-bus",
+      "name": "Priority CRITICAL Messages",
+      "description": "优先级 CRITICAL 消息发送性能",
+      "stats": {
+        "min": 0.00008400000001529406,
+        "max": 2.310375000000022,
+        "avg": 0.0011128768000003334,
+        "median": 0.00016700000003311288,
+        "p95": 0.0005419999999958236,
+        "p99": 0.0028330000000096334,
+        "samples": 5000,
+        "stdDev": 0.03710422991027889
+      },
+      "messageCount": 5000,
+      "senderCount": 1,
+      "priority": 0,
+      "passed": true
+    },
+    {
+      "type": "message-bus",
+      "name": "Priority HIGH Messages",
+      "description": "优先级 HIGH 消息发送性能",
+      "stats": {
+        "min": 0.0000829999999609754,
+        "max": 0.05237499999998363,
+        "avg": 0.00019976840000012999,
+        "median": 0.00012500000002546585,
+        "p95": 0.00033399999995253893,
+        "p99": 0.0015410100000309514,
+        "samples": 5000,
+        "stdDev": 0.000899243986224465
+      },
+      "messageCount": 5000,
+      "senderCount": 1,
+      "priority": 1,
+      "passed": true
+    },
+    {
+      "type": "message-bus",
+      "name": "Priority NORMAL Messages",
+      "description": "优先级 NORMAL 消息发送性能",
+      "stats": {
+        "min": 0.0008749999999508873,
+        "max": 0.017125000000021373,
+        "avg": 0.0010948301999998875,
+        "median": 0.0009589999999661813,
+        "p95": 0.0019580000000019027,
+        "p99": 0.002375000000029104,
+        "samples": 5000,
+        "stdDev": 0.0006181081854889931
+      },
+      "messageCount": 5000,
+      "senderCount": 1,
+      "priority": 2,
+      "passed": true
+    },
+    {
+      "type": "message-bus",
+      "name": "Priority LOW Messages",
+      "description": "优先级 LOW 消息发送性能",
+      "stats": {
+        "min": 0.0008749999999508873,
+        "max": 0.013707999999951426,
+        "avg": 0.0010728304000003049,
+        "median": 0.001082999999994172,
+        "p95": 0.0012080000000196378,
+        "p99": 0.002250000000003638,
+        "samples": 5000,
+        "stdDev": 0.0005494203658733621
+      },
+      "messageCount": 5000,
+      "senderCount": 1,
+      "priority": 3,
+      "passed": true
+    },
+    {
+      "type": "message-bus",
+      "name": "History Query (1000 messages in history)",
+      "description": "查询历史消息的性能（历史大小: 1000）",
+      "stats": {
+        "min": 0.009708999999986645,
+        "max": 1.4992090000000076,
+        "avg": 0.0709333899999956,
+        "median": 0.033749999999969305,
+        "p95": 0.1777773999999965,
+        "p99": 0.5362270900000038,
+        "samples": 100,
+        "stdDev": 0.16046583674975232
+      },
+      "messageCount": 1000,
+      "senderCount": 1,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "message-bus",
+      "name": "Broadcast Performance (50 subscribers)",
+      "description": "广播 1000 条消息给 50 个订阅者",
+      "stats": {
+        "min": 0.0009579999999687061,
+        "max": 3.613667000000021,
+        "avg": 0.011464605000000688,
+        "median": 0.002207999999995991,
+        "p95": 0.00837500000000091,
+        "p99": 0.042137089999998795,
+        "samples": 1000,
+        "stdDev": 0.13731631019666582
+      },
+      "messageCount": 1000,
+      "senderCount": 1,
+      "throughput": {
+        "opsPerSecond": 87224.98507361919,
+        "totalOps": 1000,
+        "totalDurationMs": 11.464605000000688
+      },
+      "passed": true,
+      "threshold": 1
+    }
+  ],
+  "checkpoint": [
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint Create (small)",
+      "description": "创建 small 大小的检查点 (100 个样本)",
+      "stats": {
+        "min": 0.04691700000000765,
+        "max": 2.944332999999972,
+        "avg": 0.1727687299999974,
+        "median": 0.06335350000000517,
+        "p95": 0.4528691000000007,
+        "p99": 2.339938989999971,
+        "samples": 100,
+        "stdDev": 0.395438489053322
+      },
+      "checkpointCount": 100,
+      "stateSizeBytes": 4180,
+      "passed": true,
+      "threshold": 10
+    },
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint Create (medium)",
+      "description": "创建 medium 大小的检查点 (100 个样本)",
+      "stats": {
+        "min": 0.10045800000000327,
+        "max": 9.29845899999998,
+        "avg": 0.4091520600000007,
+        "median": 0.2146874999999966,
+        "p95": 0.8642746500000041,
+        "p99": 1.7602267600000259,
+        "samples": 100,
+        "stdDev": 0.9339607992325116
+      },
+      "checkpointCount": 100,
+      "stateSizeBytes": 15845,
+      "passed": true,
+      "threshold": 10
+    },
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint Create (large)",
+      "description": "创建 large 大小的检查点 (100 个样本)",
+      "stats": {
+        "min": 0.27300000000002456,
+        "max": 18.06995900000004,
+        "avg": 1.009083810000002,
+        "median": 0.4683960000000127,
+        "p95": 1.7694875000000165,
+        "p99": 12.977563340000039,
+        "samples": 100,
+        "stdDev": 2.2874333649811467
+      },
+      "checkpointCount": 100,
+      "stateSizeBytes": 63214,
+      "passed": true,
+      "threshold": 10
+    },
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint Restore (medium)",
+      "description": "恢复 medium 大小的检查点 (1000 次恢复)",
+      "stats": {
+        "min": 0.026959000000033484,
+        "max": 3.7159580000000005,
+        "avg": 0.05009319600000242,
+        "median": 0.03129150000000891,
+        "p95": 0.10088930000007958,
+        "p99": 0.25004666000000036,
+        "samples": 1000,
+        "stdDev": 0.13435294821621682
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 15845,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "Batch Checkpoint Create (100 checkpoints)",
+      "description": "批量创建 100 个检查点",
+      "stats": {
+        "min": 0.3296187499999996,
+        "max": 0.3296187499999996,
+        "avg": 0.3296187499999996,
+        "median": 0.3296187499999996,
+        "p95": 0.3296187499999996,
+        "p99": 0.3296187499999996,
+        "samples": 3,
+        "stdDev": 0
+      },
+      "checkpointCount": 100,
+      "stateSizeBytes": 15845,
+      "throughput": {
+        "opsPerSecond": 3033.8079978763376,
+        "totalOps": 100,
+        "totalDurationMs": 32.961874999999964
+      },
+      "passed": true,
+      "threshold": 1000
+    },
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint List Query (50 checkpoints)",
+      "description": "查询包含 50 个检查点的列表",
+      "stats": {
+        "min": 0.07358299999998508,
+        "max": 2.485041000000024,
+        "avg": 0.23093120999999542,
+        "median": 0.1418124999999577,
+        "p95": 0.6634832999999786,
+        "p99": 1.0286272500000024,
+        "samples": 100,
+        "stdDev": 0.28958455878617956
+      },
+      "checkpointCount": 50,
+      "stateSizeBytes": 0,
+      "passed": true,
+      "threshold": 5
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Serialization - Small",
+      "description": "序列化 Small 大小的项目状态 (4207 bytes)",
+      "stats": {
+        "min": 0.0024160000000392756,
+        "max": 0.041583000000059656,
+        "avg": 0.0028661229999994474,
+        "median": 0.00254199999994853,
+        "p95": 0.003711050000066505,
+        "p99": 0.004167000000052212,
+        "samples": 1000,
+        "stdDev": 0.0016029711849814465
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 4207,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Serialization - Medium",
+      "description": "序列化 Medium 大小的项目状态 (15872 bytes)",
+      "stats": {
+        "min": 0.013958000000002357,
+        "max": 0.26916700000003857,
+        "avg": 0.015147813999999812,
+        "median": 0.014915999999971064,
+        "p95": 0.015546149999983069,
+        "p99": 0.018379169999991514,
+        "samples": 1000,
+        "stdDev": 0.008309004007065041
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 15872,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Serialization - Large",
+      "description": "序列化 Large 大小的项目状态 (63241 bytes)",
+      "stats": {
+        "min": 0.04258300000003601,
+        "max": 1.6581669999999349,
+        "avg": 0.04930259100000035,
+        "median": 0.046749999999974534,
+        "p95": 0.04979520000002822,
+        "p99": 0.0729214299999637,
+        "samples": 1000,
+        "stdDev": 0.05179603492144418
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 63241,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Deserialization - Small",
+      "description": "反序列化 Small 大小的项目状态 (4213 bytes)",
+      "stats": {
+        "min": 0.005624999999895408,
+        "max": 0.23287500000003547,
+        "avg": 0.00824771399999952,
+        "median": 0.005832999999938693,
+        "p95": 0.013046150000036501,
+        "p99": 0.031837260000086035,
+        "samples": 1000,
+        "stdDev": 0.01600138752996902
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 4213,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Deserialization - Medium",
+      "description": "反序列化 Medium 大小的项目状态 (15878 bytes)",
+      "stats": {
+        "min": 0.021791000000007443,
+        "max": 1.481708000000026,
+        "avg": 0.03374812700000041,
+        "median": 0.025208500000019285,
+        "p95": 0.06333929999994438,
+        "p99": 0.114245499999938,
+        "samples": 1000,
+        "stdDev": 0.07053393518503527
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 15878,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Deserialization - Large",
+      "description": "反序列化 Large 大小的项目状态 (63247 bytes)",
+      "stats": {
+        "min": 0.08754099999998743,
+        "max": 5.883709000000067,
+        "avg": 0.17864035500000022,
+        "median": 0.09822900000000345,
+        "p95": 0.4558264500000117,
+        "p99": 1.2785305000000364,
+        "samples": 1000,
+        "stdDev": 0.32899225575910146
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 63247,
+      "passed": true,
+      "threshold": 1
+    }
+  ],
+  "stateMachine": [
+    {
+      "type": "state-machine",
+      "name": "State Transition",
+      "description": "从 init 到 research 的状态转换 (10000 个样本)",
+      "stats": {
+        "min": 0.00004099999989648495,
+        "max": 0.19245899999998528,
+        "avg": 0.00016701539999971828,
+        "median": 0.00012499999991177901,
+        "p95": 0.00020899999992707308,
+        "p99": 0.0004589999999780048,
+        "samples": 10000,
+        "stdDev": 0.002262776429513326
+      },
+      "transitionCount": 10000,
+      "fromPhase": "init",
+      "toPhase": "research",
+      "passed": true,
+      "threshold": 0.1
+    },
+    {
+      "type": "state-machine",
+      "name": "Full Phase Sequence",
+      "description": "完整线性阶段序列转换 (7 个阶段)",
+      "stats": {
+        "min": 0.000055499999992510617,
+        "max": 0.20384716666666236,
+        "avg": 0.0003757011666667912,
+        "median": 0.00006949999999505962,
+        "p95": 0.00019450000000157766,
+        "p99": 0.0008478183333350363,
+        "samples": 1000,
+        "stdDev": 0.03906621112419382
+      },
+      "transitionCount": 6000,
+      "fromPhase": "INIT",
+      "toPhase": "COMPLETED",
+      "passed": true,
+      "threshold": 0.1
+    },
+    {
+      "type": "state-machine",
+      "name": "Decision Path Selection",
+      "description": "选择决策路径的性能 (1000 个样本)",
+      "stats": {
+        "min": 0.00020799999992959783,
+        "max": 0.02908300000001418,
+        "avg": 0.0004101650000010295,
+        "median": 0.0003749999999627107,
+        "p95": 0.00041699999997035775,
+        "p99": 0.0004999999999893135,
+        "samples": 1000,
+        "stdDev": 0.0010533890097091144
+      },
+      "transitionCount": 1000,
+      "fromPhase": "INIT",
+      "toPhase": "INIT",
+      "passed": true,
+      "threshold": 0.01
+    },
+    {
+      "type": "state-machine",
+      "name": "Risk Assessment",
+      "description": "风险评估性能 (1000 个样本，4 种复杂度级别)",
+      "stats": {
+        "min": 0.001082999999994172,
+        "max": 1.2553750000000719,
+        "avg": 0.0065872140000020635,
+        "median": 0.005083000000013271,
+        "p95": 0.006916000000046552,
+        "p99": 0.01646966999994446,
+        "samples": 1000,
+        "stdDev": 0.0403939807380059
+      },
+      "transitionCount": 1000,
+      "fromPhase": "INIT",
+      "toPhase": "INIT",
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "state-machine",
+      "name": "Evaluate & Select Path",
+      "description": "风险评估 + 路径选择组合性能 (1000 个样本)",
+      "stats": {
+        "min": 0.0007079999999177744,
+        "max": 1.0640839999999798,
+        "avg": 0.0040439879999993305,
+        "median": 0.00100000000009004,
+        "p95": 0.003338149999996172,
+        "p99": 0.030180999999982857,
+        "samples": 1000,
+        "stdDev": 0.04114813224708729
+      },
+      "transitionCount": 1000,
+      "fromPhase": "INIT",
+      "toPhase": "INIT",
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "state-machine",
+      "name": "Get Effective Phase Sequence",
+      "description": "获取有效阶段序列性能 (10000 个样本)",
+      "stats": {
+        "min": 0.00004099999989648495,
+        "max": 0.49883299999999053,
+        "avg": 0.00024012020000030817,
+        "median": 0.00012500000002546585,
+        "p95": 0.0003749999999627107,
+        "p99": 0.00100000000009004,
+        "samples": 10000,
+        "stdDev": 0.005053827910064957
+      },
+      "transitionCount": 10000,
+      "fromPhase": "INIT",
+      "toPhase": "COMPLETED",
+      "passed": true,
+      "threshold": 0.01
+    },
+    {
+      "type": "state-machine",
+      "name": "State Machine Serialization",
+      "description": "状态机序列化为 JSON (1000 个样本)",
+      "stats": {
+        "min": 0,
+        "max": 0.019709000000034393,
+        "avg": 0.0001188840000000937,
+        "median": 0.00004200000000764703,
+        "p95": 0.00016700000003311288,
+        "p99": 0.0008359200000563734,
+        "samples": 1000,
+        "stdDev": 0.0007331675951278136
+      },
+      "transitionCount": 1000,
+      "fromPhase": "INIT",
+      "toPhase": "EXECUTION",
+      "passed": true,
+      "threshold": 0.1
+    },
+    {
+      "type": "state-machine",
+      "name": "State Machine Deserialization",
+      "description": "从 JSON 反序列化状态机 (1000 个样本)",
+      "stats": {
+        "min": 0.00004099999989648495,
+        "max": 0.014290999999957421,
+        "avg": 0.00018958300000031158,
+        "median": 0.00012500000002546585,
+        "p95": 0.00020899999992707308,
+        "p99": 0.0009592599999689343,
+        "samples": 1000,
+        "stdDev": 0.0006757380269807766
+      },
+      "transitionCount": 1000,
+      "fromPhase": "INIT",
+      "toPhase": "EXECUTION",
+      "passed": true,
+      "threshold": 0.1
+    },
+    {
+      "type": "state-machine",
+      "name": "Get Available Transitions",
+      "description": "查询可用状态转换 (10000 个样本)",
+      "stats": {
+        "min": 0.00004100000001017179,
+        "max": 1.110416999999984,
+        "avg": 0.0004417601999998851,
+        "median": 0.00012500000002546585,
+        "p95": 0.0003330000000687505,
+        "p99": 0.0007500000000391083,
+        "samples": 10000,
+        "stdDev": 0.013540395959619653
+      },
+      "transitionCount": 10000,
+      "fromPhase": "INIT",
+      "toPhase": "N/A",
+      "passed": true,
+      "threshold": 0.01
+    }
+  ],
+  "summary": {
+    "totalTests": 37,
+    "passedTests": 37,
+    "failedTests": 0,
+    "totalDurationMs": 951.614292
+  }
+}

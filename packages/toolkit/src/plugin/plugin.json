@@ -1,0 +1,31 @@
+{
+  "name": "agent-toolkit",
+  "version": "1.0.0",
+  "description": "Multi-agent collaboration and LLM framework",
+  "author": "PAI Team",
+  "modules": [
+    "llm",
+    "team",
+    "skills",
+    "memory",
+    "tools",
+    "middleware",
+    "observability",
+    "session",
+    "retry",
+    "errors",
+    "context",
+    "qa",
+    "edge",
+    "autogen",
+    "langchain"
+  ],
+  "keywords": [
+    "agent",
+    "toolkit",
+    "plugin",
+    "multi-agent",
+    "llm"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,230 @@
+agents:
+- capabilities:
+  - code-generation
+  - code-review
+  - debugging
+  - refactoring
+  - documentation
+  - file-operations
+  id: claude-code
+  name: Claude Code
+  type: claude-code
+- capabilities:
+  - browser-automation
+  - web-scraping
+  - form-filling
+  - ui-testing
+  id: openclaw
+  name: OpenClaw
+  type: openclaw
+dataDir: ./data
+host: 0.0.0.0
+logDir: ./logs
+models:
+  default_model: deepseek-chat
+  defaults:
+    circuit_breaker:
+      failure_threshold: 3
+      half_open_max_requests: 1
+      reset_timeout_ms: 30000
+    retry:
+      base_delay_ms: 500
+      max_delay_ms: 10000
+      max_retries: 3
+      retryable_statuses:
+      - 429
+      - 500
+      - 502
+      - 503
+      - 504
+  fallback_chain:
+  - deepseek
+  - openrouter
+  - ollama
+  model_routing:
+    claude:
+    - openrouter
+    codestral:
+    - ollama
+    deepseek:
+    - deepseek
+    gemini:
+    - openrouter
+    gpt-:
+    - openai
+    - deepseek
+    gpt-5.3-codex:
+    - deepseek
+    llama:
+    - ollama
+    o1:
+    - openai
+    - deepseek
+    o4:
+    - openai
+    - deepseek
+    qwen:
+    - ollama
+  providers:
+    deepseek:
+      api_key_env: DEEPSEEK_API_KEY
+      base_url: https://api.deepseek.com/v1
+      models:
+      - deepseek-chat
+      - deepseek-reasoner
+      - deepseek-v4-pro
+      - deepseek-v4-flash
+    ollama:
+      api_key: ollama
+      base_url: http://127.0.0.1:11434/v1
+      models:
+      - qwen3:14b
+      - codestral:22b
+      - llama3.1:8b
+    openai:
+      api_key_env: OPENAI_API_KEY
+      base_url: https://api.openai.com/v1
+      models:
+      - gpt-5.1
+      - gpt-5.1-codex
+      - o4-mini
+    openrouter:
+      api_key_env: OPENROUTER_API_KEY
+      base_url: https://openrouter.ai/api/v1
+port: 3000
+routing:
+  defaultAgent: claude-code
+  rules:
+  - agent: claude-code
+    keywords:
+    - write code
+    - generate code
+    - create function
+    - create class
+    - 写代码
+    - 生成代码
+    name: code-generation
+    priority: 10
+  - agent: claude-code
+    keywords:
+    - review
+    - code review
+    - pr review
+    - review code
+    - 代码审查
+    - review code
+    name: code-review
+    priority: 15
+  - agent: claude-code
+    keywords:
+    - debug
+    - fix bug
+    - error
+    - bug
+    - 调试
+    - 修复错误
+    name: debugging
+    priority: 15
+  - agent: claude-code
+    keywords:
+    - refactor
+    - 重构
+    - improve code
+    name: refactoring
+    priority: 10
+  - agent: claude-code
+    keywords:
+    - docs
+    - document
+    - 文档
+    - write docs
+    name: documentation
+    priority: 10
+  - agent: openclaw
+    keywords:
+    - browser
+    - scrape
+    - click
+    - screenshot
+    - web automation
+    - 浏览器
+    - 爬虫
+    - 截图
+    name: browser-automation
+    priority: 15
+  - agent: openclaw
+    keywords:
+    - scrap
+    - crawl
+    - extract data
+    - 抓取
+    - 采集
+    name: web-scraping
+    priority: 15
+  - agent: cursor
+    keywords:
+    - cursor
+    - cursor task
+    name: cursor-task
+    priority: 12
+  - agent: windsurf
+    keywords:
+    - windsurf
+    - flow state
+    name: windsurf-task
+    priority: 12
+  - agent: qwen-code
+    keywords:
+    - qwen
+    - 通义千问
+    name: qwen-task
+    priority: 12
+  - agent: gemini
+    keywords:
+    - gemini
+    - multimodal
+    - 多模态
+    name: gemini-task
+    priority: 12
+  - agent: droid
+    keywords:
+    - android
+    - apk
+    - mobile
+    - 安卓
+    - 手机应用
+    name: android-development
+    priority: 15
+  - agent: aider
+    keywords:
+    - aider
+    - git edit
+    - refactor git
+    name: aider-task
+    priority: 12
+  - agent: cline
+    keywords:
+    - cline
+    - autonomous
+    name: cline-task
+    priority: 12
+  - agent: roo-code
+    keywords:
+    - roo-code
+    - roo
+    name: roo-code-task
+    priority: 12
+  - agents:
+    - claude-code
+    - openclaw
+    keywords:
+    - collaborate
+    - team
+    - together
+    - multiple agents
+    - 协作
+    - 多个
+    name: multi-agent
+    priority: 20
+    strategy: broadcast
+wsPort: 3001

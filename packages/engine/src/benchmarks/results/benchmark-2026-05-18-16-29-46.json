@@ -1,0 +1,144 @@
+{
+  "reportId": "bench-1779092985897-914afc45",
+  "environment": {
+    "nodeVersion": "v24.3.0",
+    "bunVersion": "1.3.13",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpuCores": 18,
+    "totalMemoryMB": 2,
+    "timestamp": "2026-05-18T08:29:45.897Z"
+  },
+  "agentExecution": [
+    {
+      "type": "agent-execution",
+      "name": "Single Agent Execution",
+      "description": "执行单个 Agent 的平均时间 (100 个样本)",
+      "stats": {
+        "min": 0.0006669999999999732,
+        "max": 0.012332999999999927,
+        "avg": 0.0018354499999999518,
+        "median": 0.0014585000000009174,
+        "p95": 0.0032930999999990717,
+        "p99": 0.01216865999999982,
+        "samples": 100,
+        "stdDev": 0.0016425787553417638
+      },
+      "agentCount": 1,
+      "mode": "serial",
+      "throughput": {
+        "opsPerSecond": 544825.5196273536,
+        "totalOps": 100,
+        "totalDurationMs": 0.18354499999999518
+      },
+      "memory": {
+        "heapUsedMB": 0,
+        "heapTotalMB": 0,
+        "rssMB": 0,
+        "externalMB": 0
+      },
+      "passed": true,
+      "threshold": 10
+    },
+    {
+      "type": "agent-execution",
+      "name": "Serial Execution (10 agents)",
+      "description": "串行执行 10 个 Agent 的平均时间",
+      "stats": {
+        "min": 0.0003790999999999656,
+        "max": 0.002075000000000138,
+        "avg": 0.0006579860000000082,
+        "median": 0.0005186999999999386,
+        "p95": 0.0011818750000000388,
+        "p99": 0.0020116920000000796,
+        "samples": 50,
+        "stdDev": 0.0035384863035486124
+      },
+      "agentCount": 10,
+      "mode": "serial",
+      "throughput": {
+        "opsPerSecond": 1519789.1748456466,
+        "totalOps": 500,
+        "totalDurationMs": 0.3289930000000041
+      },
+      "passed": true,
+      "threshold": 10
+    },
+    {
+      "type": "agent-execution",
+      "name": "Concurrent Execution (100 agents)",
+      "description": "并发执行 100 个 Agent 的平均时间",
+      "stats": {
+        "min": 0.00027459000000000343,
+        "max": 0.0009604200000000063,
+        "avg": 0.0003726670000000034,
+        "median": 0.0003468749999999865,
+        "p95": 0.00042763149999999723,
+        "p99": 0.0008538623000000037,
+        "samples": 20,
+        "stdDev": 0.013888370099115326
+      },
+      "agentCount": 100,
+      "mode": "concurrent",
+      "throughput": {
+        "opsPerSecond": 2683360.748335621,
+        "totalOps": 2000,
+        "totalDurationMs": 0.7453340000000068
+      },
+      "passed": true,
+      "threshold": 5000
+    },
+    {
+      "type": "agent-execution",
+      "name": "Agent Pool Loading (100 agents)",
+      "description": "加载 100 个 Agent 定义的时间",
+      "stats": {
+        "min": 1.1981249999999974,
+        "max": 2.147750000000002,
+        "avg": 1.3193333399999994,
+        "median": 1.2651250000000047,
+        "p95": 1.551685049999998,
+        "p99": 1.9056694199999975,
+        "samples": 50,
+        "stdDev": 0.15525756740070473
+      },
+      "agentCount": 100,
+      "mode": "serial",
+      "passed": true,
+      "threshold": 1000
+    },
+    {
+      "type": "agent-execution",
+      "name": "Agent Pool Queries (100 agents)",
+      "description": "执行 1000 次查询的平均时间",
+      "stats": {
+        "min": 0.0010275840000000046,
+        "max": 0.003990583000000001,
+        "avg": 0.0017048793,
+        "median": 0.0013567290000000014,
+        "p95": 0.003575758149999997,
+        "p99": 0.00390761803,
+        "samples": 10,
+        "stdDev": 0.0009493618002197091
+      },
+      "agentCount": 100,
+      "mode": "serial",
+      "throughput": {
+        "opsPerSecond": 586551.786979876,
+        "totalOps": 10000,
+        "totalDurationMs": 17.048793000000003
+      },
+      "passed": true,
+      "threshold": 0.1
+    }
+  ],
+  "messageBus": [],
+  "checkpoint": [],
+  "stateMachine": [],
+  "summary": {
+    "totalTests": 5,
+    "passedTests": 5,
+    "failedTests": 0,
+    "totalDurationMs": 121.192792
+  }
+}

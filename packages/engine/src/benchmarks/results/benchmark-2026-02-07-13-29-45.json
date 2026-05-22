@@ -1,0 +1,256 @@
+{
+  "reportId": "bench-1770442184495-cfc34953",
+  "environment": {
+    "nodeVersion": "v24.3.0",
+    "bunVersion": "1.3.8",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpuCores": 12,
+    "totalMemoryMB": 2,
+    "timestamp": "2026-02-07T05:29:44.495Z"
+  },
+  "agentExecution": [],
+  "messageBus": [],
+  "checkpoint": [
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint Create (small)",
+      "description": "创建 small 大小的检查点 (100 个样本)",
+      "stats": {
+        "min": 0.04949999999999477,
+        "max": 2.9700419999999923,
+        "avg": 0.35451418000000046,
+        "median": 0.2093954999999994,
+        "p95": 1.2081523999999895,
+        "p99": 2.4057004200000085,
+        "samples": 100,
+        "stdDev": 0.4915479191336353
+      },
+      "checkpointCount": 100,
+      "stateSizeBytes": 4180,
+      "passed": true,
+      "threshold": 10
+    },
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint Create (medium)",
+      "description": "创建 medium 大小的检查点 (100 个样本)",
+      "stats": {
+        "min": 0.10354199999997604,
+        "max": 12.73670899999999,
+        "avg": 0.5404929100000021,
+        "median": 0.235478999999998,
+        "p95": 1.3529975999999873,
+        "p99": 2.859107750000047,
+        "samples": 100,
+        "stdDev": 1.3124387740717423
+      },
+      "checkpointCount": 100,
+      "stateSizeBytes": 15845,
+      "passed": true,
+      "threshold": 10
+    },
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint Create (large)",
+      "description": "创建 large 大小的检查点 (100 个样本)",
+      "stats": {
+        "min": 0.28808399999996936,
+        "max": 16.708124999999995,
+        "avg": 1.4752637799999981,
+        "median": 0.8570419999999928,
+        "p95": 4.143343749999983,
+        "p99": 14.98647342000002,
+        "samples": 100,
+        "stdDev": 2.4872669887326144
+      },
+      "checkpointCount": 100,
+      "stateSizeBytes": 63214,
+      "passed": true,
+      "threshold": 10
+    },
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint Restore (medium)",
+      "description": "恢复 medium 大小的检查点 (1000 次恢复)",
+      "stats": {
+        "min": 0.0272499999999809,
+        "max": 16.278999999999996,
+        "avg": 0.07417511299999978,
+        "median": 0.032416999999981044,
+        "p95": 0.11609550000000296,
+        "p99": 0.3799752500000163,
+        "samples": 1000,
+        "stdDev": 0.5409095140033536
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 15845,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "Batch Checkpoint Create (100 checkpoints)",
+      "description": "批量创建 100 个检查点",
+      "stats": {
+        "min": 0.3800616600000001,
+        "max": 0.3800616600000001,
+        "avg": 0.38006166000000013,
+        "median": 0.3800616600000001,
+        "p95": 0.3800616600000001,
+        "p99": 0.3800616600000001,
+        "samples": 3,
+        "stdDev": 5.551115123125783e-17
+      },
+      "checkpointCount": 100,
+      "stateSizeBytes": 15845,
+      "throughput": {
+        "opsPerSecond": 2631.1520083346472,
+        "totalOps": 100,
+        "totalDurationMs": 38.00616600000001
+      },
+      "passed": true,
+      "threshold": 1000
+    },
+    {
+      "type": "checkpoint",
+      "name": "Checkpoint List Query (50 checkpoints)",
+      "description": "查询包含 50 个检查点的列表",
+      "stats": {
+        "min": 0.07241699999997309,
+        "max": 3.3630410000000097,
+        "avg": 0.22948751999999842,
+        "median": 0.11718749999994316,
+        "p95": 0.45969019999999133,
+        "p99": 2.5825091600000296,
+        "samples": 100,
+        "stdDev": 0.4612514941107201
+      },
+      "checkpointCount": 50,
+      "stateSizeBytes": 0,
+      "passed": true,
+      "threshold": 5
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Serialization - Small",
+      "description": "序列化 Small 大小的项目状态 (4207 bytes)",
+      "stats": {
+        "min": 0.0024159999999255888,
+        "max": 0.02416599999992286,
+        "avg": 0.0027756150000002437,
+        "median": 0.0025000000000545697,
+        "p95": 0.00354200000003857,
+        "p99": 0.004292000000077678,
+        "samples": 1000,
+        "stdDev": 0.0010524764086552493
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 4207,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Serialization - Medium",
+      "description": "序列化 Medium 大小的项目状态 (15872 bytes)",
+      "stats": {
+        "min": 0.013832999999976892,
+        "max": 0.7207080000000587,
+        "avg": 0.02135924600000044,
+        "median": 0.014687499999979536,
+        "p95": 0.03571104999999761,
+        "p99": 0.11751874999995038,
+        "samples": 1000,
+        "stdDev": 0.03542990803552094
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 15872,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Serialization - Large",
+      "description": "序列化 Large 大小的项目状态 (63241 bytes)",
+      "stats": {
+        "min": 0.041624999999953616,
+        "max": 2.1884999999999764,
+        "avg": 0.07519964700000015,
+        "median": 0.04608300000006693,
+        "p95": 0.13283779999999293,
+        "p99": 0.6777990799999544,
+        "samples": 1000,
+        "stdDev": 0.15320455225800717
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 63241,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Deserialization - Small",
+      "description": "反序列化 Small 大小的项目状态 (4213 bytes)",
+      "stats": {
+        "min": 0.005624999999895408,
+        "max": 0.13812500000005912,
+        "avg": 0.006764386999999942,
+        "median": 0.005750000000034561,
+        "p95": 0.009749999999939973,
+        "p99": 0.015583839999992504,
+        "samples": 1000,
+        "stdDev": 0.0058454769820135396
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 4213,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Deserialization - Medium",
+      "description": "反序列化 Medium 大小的项目状态 (15878 bytes)",
+      "stats": {
+        "min": 0.021917000000030384,
+        "max": 0.44849999999996726,
+        "avg": 0.03007223999999792,
+        "median": 0.024354500000015378,
+        "p95": 0.06537710000001766,
+        "p99": 0.11340457999990575,
+        "samples": 1000,
+        "stdDev": 0.025773417369846088
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 15878,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "checkpoint",
+      "name": "State Deserialization - Large",
+      "description": "反序列化 Large 大小的项目状态 (63247 bytes)",
+      "stats": {
+        "min": 0.08866699999998673,
+        "max": 3.8670000000000755,
+        "avg": 0.11879322800000217,
+        "median": 0.09672900000003892,
+        "p95": 0.2377526999999986,
+        "p99": 0.45736299999992397,
+        "samples": 1000,
+        "stdDev": 0.1526328803223358
+      },
+      "checkpointCount": 1000,
+      "stateSizeBytes": 63247,
+      "passed": true,
+      "threshold": 1
+    }
+  ],
+  "stateMachine": [],
+  "summary": {
+    "totalTests": 12,
+    "passedTests": 12,
+    "failedTests": 0,
+    "totalDurationMs": 713.865
+  }
+}

@@ -1,0 +1,252 @@
+{
+  "reportId": "bench-1770442178307-bfad1220",
+  "environment": {
+    "nodeVersion": "v24.3.0",
+    "bunVersion": "1.3.8",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpuCores": 12,
+    "totalMemoryMB": 2,
+    "timestamp": "2026-02-07T05:29:38.307Z"
+  },
+  "agentExecution": [],
+  "messageBus": [
+    {
+      "type": "message-bus",
+      "name": "Message Send Latency",
+      "description": "发送 10000 条消息的延迟 (10000 个样本)",
+      "stats": {
+        "min": 0.00008299999999650254,
+        "max": 1.6841250000000016,
+        "avg": 0.0010485928999999906,
+        "median": 0.0001660000000001105,
+        "p95": 0.0012079999999983215,
+        "p99": 0.0029174100000000625,
+        "samples": 10000,
+        "stdDev": 0.028765716631159583
+      },
+      "messageCount": 10000,
+      "senderCount": 1,
+      "throughput": {
+        "opsPerSecond": 953658.9461935217,
+        "totalOps": 10000,
+        "totalDurationMs": 10.485928999999906
+      },
+      "passed": true,
+      "threshold": 0.1
+    },
+    {
+      "type": "message-bus",
+      "name": "Throughput - Single Sender (10000 messages)",
+      "description": "单发送者发送 10000 条消息的吞吐量",
+      "stats": {
+        "min": 0.000042000000000541604,
+        "max": 0.26020899999999614,
+        "avg": 0.0002895185000000339,
+        "median": 0.00012500000000414957,
+        "p95": 0.0005419999999958236,
+        "p99": 0.002292420000004123,
+        "samples": 10000,
+        "stdDev": 0.002913222292523785
+      },
+      "messageCount": 10000,
+      "senderCount": 1,
+      "throughput": {
+        "opsPerSecond": 3454010.71088681,
+        "totalOps": 10000,
+        "totalDurationMs": 2.895185000000339
+      },
+      "passed": true,
+      "threshold": 100000
+    },
+    {
+      "type": "message-bus",
+      "name": "Throughput - Multiple Senders (5 senders)",
+      "description": "5 个发送者，每人 2000 条消息的吞吐量",
+      "stats": {
+        "min": 0.0004240791999999999,
+        "max": 0.0004240791999999999,
+        "avg": 0.0004240791999999999,
+        "median": 0.0004240791999999999,
+        "p95": 0.0004240791999999999,
+        "p99": 0.0004240791999999999,
+        "samples": 1,
+        "stdDev": 0
+      },
+      "messageCount": 10000,
+      "senderCount": 5,
+      "throughput": {
+        "opsPerSecond": 2358050.100075647,
+        "totalOps": 10000,
+        "totalDurationMs": 4.240791999999999
+      },
+      "passed": true,
+      "threshold": 50000
+    },
+    {
+      "type": "message-bus",
+      "name": "Subscribe Performance (100 subscribers)",
+      "description": "添加 100 个订阅者的平均时间",
+      "stats": {
+        "min": 0.00009333999999995512,
+        "max": 0.0170733400000001,
+        "avg": 0.0006681495000000041,
+        "median": 0.00015229000000001493,
+        "p95": 0.0006285000000000131,
+        "p99": 0.016730126799999995,
+        "samples": 100,
+        "stdDev": 0.0025726810501398682
+      },
+      "messageCount": 100,
+      "senderCount": 1,
+      "passed": true,
+      "threshold": 0.01
+    },
+    {
+      "type": "message-bus",
+      "name": "Unsubscribe Performance (100 subscribers)",
+      "description": "取消 100 个订阅的平均时间",
+      "stats": {
+        "min": 0.000021250000000065938,
+        "max": 0.039317080000000004,
+        "avg": 0.0004466960000000029,
+        "median": 0.000056875000000076165,
+        "p95": 0.0000960030000000955,
+        "p99": 0.0005606491000002648,
+        "samples": 100,
+        "stdDev": 0.003906737441679694
+      },
+      "messageCount": 100,
+      "senderCount": 1,
+      "passed": true,
+      "threshold": 0.01
+    },
+    {
+      "type": "message-bus",
+      "name": "Priority CRITICAL Messages",
+      "description": "优先级 CRITICAL 消息发送性能",
+      "stats": {
+        "min": 0.00008299999998939711,
+        "max": 1.0856670000000008,
+        "avg": 0.00044901680000004093,
+        "median": 0.00012499999999704414,
+        "p95": 0.0005000000000023874,
+        "p99": 0.00162542000000415,
+        "samples": 5000,
+        "stdDev": 0.015379976845305005
+      },
+      "messageCount": 5000,
+      "senderCount": 1,
+      "priority": 0,
+      "passed": true
+    },
+    {
+      "type": "message-bus",
+      "name": "Priority HIGH Messages",
+      "description": "优先级 HIGH 消息发送性能",
+      "stats": {
+        "min": 0.00008299999998939711,
+        "max": 0.00924999999999443,
+        "avg": 0.00015111159999999586,
+        "median": 0.00012499999999704414,
+        "p95": 0.0002080000000006521,
+        "p99": 0.0005829999999917845,
+        "samples": 5000,
+        "stdDev": 0.0003332302074323456
+      },
+      "messageCount": 5000,
+      "senderCount": 1,
+      "priority": 1,
+      "passed": true
+    },
+    {
+      "type": "message-bus",
+      "name": "Priority NORMAL Messages",
+      "description": "优先级 NORMAL 消息发送性能",
+      "stats": {
+        "min": 0.0008330000000000837,
+        "max": 0.7825420000000065,
+        "avg": 0.0013734575999999805,
+        "median": 0.0009170000000011669,
+        "p95": 0.001041999999998211,
+        "p99": 0.0014999999999929514,
+        "samples": 5000,
+        "stdDev": 0.015057745505320599
+      },
+      "messageCount": 5000,
+      "senderCount": 1,
+      "priority": 2,
+      "passed": true
+    },
+    {
+      "type": "message-bus",
+      "name": "Priority LOW Messages",
+      "description": "优先级 LOW 消息发送性能",
+      "stats": {
+        "min": 0.0008340000000117698,
+        "max": 0.00837500000000091,
+        "avg": 0.000960629000000074,
+        "median": 0.0009170000000011669,
+        "p95": 0.0010410000000007358,
+        "p99": 0.0013749999999959073,
+        "samples": 5000,
+        "stdDev": 0.0002916576619240779
+      },
+      "messageCount": 5000,
+      "senderCount": 1,
+      "priority": 3,
+      "passed": true
+    },
+    {
+      "type": "message-bus",
+      "name": "History Query (1000 messages in history)",
+      "description": "查询历史消息的性能（历史大小: 1000）",
+      "stats": {
+        "min": 0.007041999999998438,
+        "max": 0.42558300000000315,
+        "avg": 0.02924751999999984,
+        "median": 0.011499999999998067,
+        "p95": 0.07917535000000407,
+        "p99": 0.22948083000000724,
+        "samples": 100,
+        "stdDev": 0.05015423466218665
+      },
+      "messageCount": 1000,
+      "senderCount": 1,
+      "passed": true,
+      "threshold": 1
+    },
+    {
+      "type": "message-bus",
+      "name": "Broadcast Performance (50 subscribers)",
+      "description": "广播 1000 条消息给 50 个订阅者",
+      "stats": {
+        "min": 0.0009159999999894808,
+        "max": 0.703125,
+        "avg": 0.004849289999999656,
+        "median": 0.002082999999998947,
+        "p95": 0.006044049999994171,
+        "p99": 0.02589675999999153,
+        "samples": 1000,
+        "stdDev": 0.035405954281390026
+      },
+      "messageCount": 1000,
+      "senderCount": 1,
+      "throughput": {
+        "opsPerSecond": 206215.7552961508,
+        "totalOps": 1000,
+        "totalDurationMs": 4.849289999999655
+      },
+      "passed": true,
+      "threshold": 1
+    }
+  ],
+  "checkpoint": [],
+  "stateMachine": [],
+  "summary": {
+    "totalTests": 11,
+    "passedTests": 11,
+    "failedTests": 0,
+    "totalDurationMs": 83.704083
+  }
+}
