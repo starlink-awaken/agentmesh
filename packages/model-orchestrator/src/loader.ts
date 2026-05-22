@@ -24,6 +24,12 @@ export interface ModelsConfig {
     anthropic?: { enabled: boolean; api_key_env?: string; base_url?: string };
     openrouter?: { enabled: boolean; api_key_env?: string };
   };
+  model_overrides?: {
+    id_prefix: string;
+    avg_latency_ms?: number;
+    cost_per_1k_input?: number;
+    cost_per_1k_output?: number;
+  }[];
   scheduler?: Partial<SchedulerConfig>;
 }
 
@@ -132,6 +138,31 @@ export function initFromConfig(configPath?: string): InitResult {
   }
   const scheduler = new ModelScheduler(registry, schedCfg);
   registry.setScheduler(scheduler);
+
+  // 应用模型元数据覆盖（成本/延迟）
+  const overrides = config.model_overrides;
+  if (overrides?.length) {
+    const origRefresh = registry.refresh.bind(registry);
+    registry.refresh = async () => {
+      const models = await origRefresh();
+      for (const m of models) {
+        // 最长前缀匹配
+        const match = overrides
+          .filter(o => m.id.includes(o.id_prefix))
+          .sort((a, b) => b.id_prefix.length - a.id_prefix.length)[0];
+        if (match) {
+          if (match.avg_latency_ms !== undefined) m.avgLatencyMs = match.avg_latency_ms;
+          if (match.cost_per_1k_input !== undefined || match.cost_per_1k_output !== undefined) {
+            m.costPer1KTokens = {
+              input: match.cost_per_1k_input ?? 0,
+              output: match.cost_per_1k_output ?? 0,
+            };
+          }
+        }
+      }
+      return models;
+    };
+  }
 
   return { registry, scheduler, config };
 }
