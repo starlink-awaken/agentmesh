@@ -1,0 +1,6 @@
+{
+  "name": "data-science",
+  "description": "Data science domain",
+  "archetype": "data-science",
+  "version": "1.0.0"
+}

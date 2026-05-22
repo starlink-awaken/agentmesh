@@ -1,0 +1,6 @@
+{
+  "name": "document-processing",
+  "description": "Document processing domain",
+  "archetype": "document-processing",
+  "version": "1.0.0"
+}

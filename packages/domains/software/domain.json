@@ -1,0 +1,32 @@
+{
+  "name": "Software Development",
+  "description": "Software development domain with CI/CD and code review",
+  "archetype": "software-dev",
+  "version": "1.0.0",
+  "quality_gates": [
+    {
+      "name": "Code Quality",
+      "phase": "execution",
+      "mandatory": true,
+      "criteria": [
+        {
+          "id": "coverage-check",
+          "description": "Code coverage meets threshold",
+          "pass_condition": "coverage >= 80",
+          "mandatory": true
+        },
+        {
+          "id": "test-pass",
+          "description": "All tests pass",
+          "pass_condition": "test_failures == 0",
+          "mandatory": true
+        }
+      ]
+    }
+  ],
+  "defaults": {
+    "complexity": "standard",
+    "token_budget": 100000,
+    "max_concurrent_agents": 3
+  }
+}

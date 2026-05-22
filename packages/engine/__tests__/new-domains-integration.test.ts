@@ -438,7 +438,7 @@ describe('New Domain Integration Tests', () => {
 // ============================================================
 
 describe('Real domain file integration', () => {
-  const domainsRoot = '/Volumes/Model/Workspace/Agent/honeycomb/domains';
+  const domainsRoot = '/Users/xiamingxing/Workspace/agentmesh/packages/domains';
 
   describe('visual-production domain files', () => {
     test('domain.json exists and is valid', () => {

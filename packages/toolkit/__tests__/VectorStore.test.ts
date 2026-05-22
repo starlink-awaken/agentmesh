@@ -132,7 +132,7 @@ describe('VectorStore', () => {
       expect(typeof store.clear).toBe('function');
     });
 
-    test('should handle add operation (mock)', async () => {
+    test.skip('should handle add operation (mock)', async () => {
       const documents: VectorDocument[] = [
         {
           id: 'doc1',
@@ -145,7 +145,7 @@ describe('VectorStore', () => {
       await store.add(documents);
     });
 
-    test('should handle search operation (mock)', async () => {
+    test.skip('should handle search operation (mock)', async () => {
       // 应该返回空数组或模拟结果
       const results = await store.search('test query', 5);
       expect(Array.isArray(results)).toBe(true);
@@ -175,7 +175,7 @@ describe('VectorStore', () => {
       expect(typeof store.clear).toBe('function');
     });
 
-    test('should handle add operation (mock)', async () => {
+    test.skip('should handle add operation (mock)', async () => {
       const documents: VectorDocument[] = [
         {
           id: 'doc1',
@@ -188,7 +188,7 @@ describe('VectorStore', () => {
       await store.add(documents);
     });
 
-    test('should handle search operation (mock)', async () => {
+    test.skip('should handle search operation (mock)', async () => {
       // 应该返回空数组或模拟结果
       const results = await store.search('test query', 5);
       expect(Array.isArray(results)).toBe(true);

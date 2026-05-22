@@ -1,0 +1,15 @@
+{
+  "db_path": "/tmp/engine-test.db",
+  "agents_root": "/Users/xiamingxing/Workspace/agentmesh/packages/agents",
+  "domains_root": "/Users/xiamingxing/Workspace/agentmesh/packages/domains",
+  "output_dir": "/tmp/engine-output",
+  "log_level": "error",
+  "default_token_budget": 100000,
+  "max_concurrent_agents": 5,
+  "auto_checkpoint": true,
+  "risk_thresholds": {
+    "file_count": { "low": 3, "medium": 10, "high": 20 },
+    "security_keywords_enabled": true,
+    "custom_rules": []
+  }
+}

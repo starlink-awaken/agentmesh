@@ -1,83 +1,83 @@
 {
-  "test": "type-checker-performance",
-  "timestamp": 1779419846771,
+  "test": "code-generator-performance",
+  "timestamp": 1779423178368,
   "environment": {
     "platform": "darwin",
     "arch": "arm64",
     "nodeVersion": "v24.3.0",
     "cpuCount": 18,
-    "totalMemory": "72MB",
-    "timestamp": "2026-05-22T03:17:26.771Z"
+    "totalMemory": "68MB",
+    "timestamp": "2026-05-22T04:12:58.368Z"
   },
   "results": [
     {
       "sample": "simple-agent",
       "result": {
-        "timeMs": 0.09954199999992852,
-        "errorCount": 0
+        "timeMs": 0.03054100000008475,
+        "linesOfCode": 20
       }
     },
     {
       "sample": "minimal-agent",
       "result": {
-        "timeMs": 0.009749999999257852,
-        "errorCount": 0
+        "timeMs": 0.012042000002111308,
+        "linesOfCode": 20
       }
     },
     {
       "sample": "data-processor",
       "result": {
-        "timeMs": 0.07758299999841256,
-        "errorCount": 0
+        "timeMs": 0.034916999997221865,
+        "linesOfCode": 25
       }
     },
     {
       "sample": "transform-agent",
       "result": {
-        "timeMs": 0.03608399999939138,
-        "errorCount": 1
+        "timeMs": 0.02883299999666633,
+        "linesOfCode": 0
       }
     },
     {
       "sample": "conditional-router",
       "result": {
-        "timeMs": 0.027833000000100583,
-        "errorCount": 1
+        "timeMs": 0.0239579999979469,
+        "linesOfCode": 0
       }
     },
     {
       "sample": "resilient-processor",
       "result": {
-        "timeMs": 0.04620799999975134,
-        "errorCount": 1
+        "timeMs": 0.023665999997319886,
+        "linesOfCode": 0
       }
     },
     {
       "sample": "enterprise-workflow",
       "result": {
-        "timeMs": 0.07066599999961909,
-        "errorCount": 0
+        "timeMs": 0.06479100000069593,
+        "linesOfCode": 27
       }
     },
     {
       "sample": "multi-domain-orchestrator",
       "result": {
-        "timeMs": 0.038875000000189175,
-        "errorCount": 0
+        "timeMs": 0.055041999999957625,
+        "linesOfCode": 37
       }
     },
     {
       "sample": "parallel-processor",
       "result": {
-        "timeMs": 0.06291700000110723,
-        "errorCount": 0
+        "timeMs": 0.031374999998661224,
+        "linesOfCode": 23
       }
     },
     {
       "sample": "batch-processor",
       "result": {
-        "timeMs": 0.016625000000203727,
-        "errorCount": 0
+        "timeMs": 0.02179199999955017,
+        "linesOfCode": 23
       }
     }
   ]

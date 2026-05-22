@@ -1,93 +1,93 @@
 {
   "test": "lexer-performance",
-  "timestamp": 1779419846764,
+  "timestamp": 1779423178353,
   "environment": {
     "platform": "darwin",
     "arch": "arm64",
     "nodeVersion": "v24.3.0",
     "cpuCount": 18,
-    "totalMemory": "72MB",
-    "timestamp": "2026-05-22T03:17:26.764Z"
+    "totalMemory": "67MB",
+    "timestamp": "2026-05-22T04:12:58.353Z"
   },
   "results": [
     {
       "sample": "simple-agent",
       "result": {
         "tokenCount": 81,
-        "timeMs": 0.012508340000003955,
-        "throughput": 6475.679426684467
+        "timeMs": 0.017853749999994763,
+        "throughput": 4536.862003782049
       }
     },
     {
       "sample": "minimal-agent",
       "result": {
         "tokenCount": 75,
-        "timeMs": 0.010910000000003493,
-        "throughput": 6874.42713107021
+        "timeMs": 0.01738792000000103,
+        "throughput": 4313.339375842283
       }
     },
     {
       "sample": "data-processor",
       "result": {
         "tokenCount": 249,
-        "timeMs": 0.03618542000000161,
-        "throughput": 6881.224537396247
+        "timeMs": 0.05250792000002548,
+        "throughput": 4742.1417568983725
       }
     },
     {
       "sample": "transform-agent",
       "result": {
         "tokenCount": 218,
-        "timeMs": 0.029383749999997235,
-        "throughput": 7419.066660995296
+        "timeMs": 0.04535915999997087,
+        "throughput": 4806.085474249082
       }
     },
     {
       "sample": "conditional-router",
       "result": {
         "tokenCount": 266,
-        "timeMs": 0.03483833000000232,
-        "throughput": 7635.268395470802
+        "timeMs": 0.057047920000004526,
+        "throughput": 4662.746687345987
       }
     },
     {
       "sample": "resilient-processor",
       "result": {
         "tokenCount": 342,
-        "timeMs": 0.04590250000001106,
-        "throughput": 7450.574587438976
+        "timeMs": 0.07198875000001863,
+        "throughput": 4750.74230348369
       }
     },
     {
       "sample": "enterprise-workflow",
       "result": {
         "tokenCount": 563,
-        "timeMs": 0.06452708999999231,
-        "throughput": 8725.017663125163
+        "timeMs": 0.09748666999999842,
+        "throughput": 5775.148540821111
       }
     },
     {
       "sample": "multi-domain-orchestrator",
       "result": {
         "tokenCount": 624,
-        "timeMs": 0.07216667000000598,
-        "throughput": 8646.650870823723
+        "timeMs": 0.10190333000002283,
+        "throughput": 6123.450529044146
       }
     },
     {
       "sample": "parallel-processor",
       "result": {
         "tokenCount": 276,
-        "timeMs": 0.029035000000003492,
-        "throughput": 9505.768899602783
+        "timeMs": 0.04867791000000579,
+        "throughput": 5669.922969165422
       }
     },
     {
       "sample": "batch-processor",
       "result": {
         "tokenCount": 240,
-        "timeMs": 0.02687416000000667,
-        "throughput": 8930.511688549166
+        "timeMs": 0.049268750000010186,
+        "throughput": 4871.241912976286
       }
     }
   ]

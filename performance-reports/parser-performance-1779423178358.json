@@ -1,28 +1,28 @@
 {
   "test": "parser-performance",
-  "timestamp": 1779419846767,
+  "timestamp": 1779423178358,
   "environment": {
     "platform": "darwin",
     "arch": "arm64",
     "nodeVersion": "v24.3.0",
     "cpuCount": 18,
-    "totalMemory": "72MB",
-    "timestamp": "2026-05-22T03:17:26.767Z"
+    "totalMemory": "67MB",
+    "timestamp": "2026-05-22T04:12:58.358Z"
   },
   "results": [
     {
       "sample": "simple-agent",
       "result": {
         "nodeCount": 7,
-        "timeMs": 0.0009183299999858718,
-        "throughput": 7000
+        "timeMs": 0.001503340000017488,
+        "throughput": 4656.298641637002
       }
     },
     {
       "sample": "minimal-agent",
       "result": {
         "nodeCount": 7,
-        "timeMs": 0.000836250000011205,
+        "timeMs": 0.0009479199999987032,
         "throughput": 7000
       }
     },
@@ -30,64 +30,64 @@
       "sample": "data-processor",
       "result": {
         "nodeCount": 38,
-        "timeMs": 0.0011058299999967857,
-        "throughput": 34363.328902372385
+        "timeMs": 0.0016491700000187848,
+        "throughput": 23041.893800861744
       }
     },
     {
       "sample": "transform-agent",
       "result": {
         "nodeCount": 33,
-        "timeMs": 0.0010645900000054098,
-        "throughput": 30997.848936991995
+        "timeMs": 0.0014374999999927241,
+        "throughput": 22956.52173924663
       }
     },
     {
       "sample": "conditional-router",
       "result": {
         "nodeCount": 46,
-        "timeMs": 0.0011608300000079909,
-        "throughput": 39626.81874148958
+        "timeMs": 0.0018500000000130968,
+        "throughput": 24864.864864688836
       }
     },
     {
       "sample": "resilient-processor",
       "result": {
         "nodeCount": 48,
-        "timeMs": 0.0015337499999986902,
-        "throughput": 31295.84352080912
+        "timeMs": 0.0025795799999832527,
+        "throughput": 18607.68032017291
       }
     },
     {
       "sample": "enterprise-workflow",
       "result": {
         "nodeCount": 106,
-        "timeMs": 0.002016249999996944,
-        "throughput": 52572.84562934192
+        "timeMs": 0.0030741699999998675,
+        "throughput": 34480.85174209773
       }
     },
     {
       "sample": "multi-domain-orchestrator",
       "result": {
         "nodeCount": 81,
-        "timeMs": 0.002510420000016893,
-        "throughput": 32265.517323577307
+        "timeMs": 0.0035379200000170384,
+        "throughput": 22894.80824880436
       }
     },
     {
       "sample": "parallel-processor",
       "result": {
         "nodeCount": 41,
-        "timeMs": 0.0011641600000075413,
-        "throughput": 35218.52666277351
+        "timeMs": 0.0026391700000021954,
+        "throughput": 15535.187198992824
       }
     },
     {
       "sample": "batch-processor",
       "result": {
         "nodeCount": 38,
-        "timeMs": 0.0011970800000017335,
-        "throughput": 31743.91018139554
+        "timeMs": 0.001601249999985157,
+        "throughput": 23731.45979725355
       }
     }
   ]
