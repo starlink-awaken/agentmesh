@@ -74,6 +74,14 @@ function resolveGatewayScript(): string {
   return srcPath;
 }
 
+/**
+ * 解析 ontoderive MCP server 脚本路径。
+ */
+function resolveOntoderiveScript(): string {
+  const ontoderivePath = join(ROOT, '..', 'ontoderive', 'engine', 'mcp_server.py');
+  return ontoderivePath;
+}
+
 // ── 进程管理 ──
 
 /** 启动单个进程 */
@@ -86,13 +94,18 @@ function startProcess(mp: ManagedProcess): void {
   if (mp.name === 'gateway') {
     script = resolveGatewayScript();
     cwd = ROOT;
+  } else if (mp.name === 'ontoderive-mcp') {
+    script = resolveOntoderiveScript();
+    cwd = ROOT;
   } else {
     // MCP server 在 apps/server/src/mcp/ 下
     script = join(__dirname, 'mcp', 'index.ts');
     cwd = ROOT;
   }
 
-  const child = spawn('bun', ['run', script], {
+  const cmd = script.endsWith('.py') ? 'python3' : 'bun';
+  const cmdArgs = script.endsWith('.py') ? [script] : ['run', script];
+  const child = spawn(cmd, cmdArgs, {
     cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
     env: { ...process.env },
@@ -263,6 +276,16 @@ export function startAll(): void {
   processes.push({
     name: 'mcp-server',
     tag: 'mcp',
+    proc: null,
+    restartCount: 0,
+    maxRestarts: 3,
+    healthCheck: null,
+  });
+
+  // OntoDerive MCP Server — 知识工程分析 (17 工具)
+  processes.push({
+    name: 'ontoderive-mcp',
+    tag: 'ontoderive',
     proc: null,
     restartCount: 0,
     maxRestarts: 3,
