@@ -1,7 +1,7 @@
 /**
  * Agent Mesh — MCP Server
  *
- * 11 个 MCP tools，连接 model-orchestrator 实现
+ * 11 个 MCP tools，对接 model-orchestrator / gateway / toolkit 真实实现
  */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -10,6 +10,8 @@ import {
   CallToolRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import type { LocalModelDiscoverer, ModelRegistry, ModelScheduler } from '@agentmesh/model-orchestrator';
+import type { TaskManager } from '@agentmesh/gateway';
+import type { SkillLoader, SkillController } from '@agentmesh/toolkit';
 
 // ── 依赖注入 ──
 
@@ -17,6 +19,9 @@ export interface MCPServerDeps {
   discoverer?: LocalModelDiscoverer;
   registry?: ModelRegistry;
   scheduler?: ModelScheduler;
+  taskManager?: TaskManager;
+  skillLoader?: SkillLoader;
+  skillController?: SkillController;
 }
 
 // ── Tool 定义 ──
@@ -39,32 +44,32 @@ const TOOLS = [
   },
   {
     name: 'tasks_submit',
-    description: '提交新任务（需连接 gateway TaskManager）',
-    inputSchema: { type: 'object', properties: { type: { type: 'string' }, payload: { type: 'object' } }, required: ['type', 'payload'] },
+    description: '提交新任务',
+    inputSchema: { type: 'object', properties: { type: { type: 'string' }, payload: { type: 'object' }, priority: { type: 'number' } }, required: ['type', 'payload'] },
   },
   {
     name: 'tasks_status',
-    description: '查询任务状态（需连接 gateway TaskManager）',
+    description: '查询任务状态',
     inputSchema: { type: 'object', properties: { taskId: { type: 'string' } }, required: ['taskId'] },
   },
   {
     name: 'tasks_list',
-    description: '列出所有任务（需连接 gateway TaskManager）',
+    description: '列出所有任务',
     inputSchema: { type: 'object', properties: { status: { type: 'string' } } },
   },
   {
     name: 'skills_list',
-    description: '列出可用技能（需连接 toolkit SkillLoader）',
+    description: '列出可用技能',
     inputSchema: { type: 'object', properties: { category: { type: 'string' } } },
   },
   {
     name: 'skills_search',
-    description: '搜索匹配任务的技能（需连接 toolkit SkillRouter）',
+    description: '搜索匹配任务的技能',
     inputSchema: { type: 'object', properties: { task: { type: 'string' } }, required: ['task'] },
   },
   {
     name: 'skills_execute',
-    description: '执行指定技能（需连接 toolkit SkillController）',
+    description: '执行指定技能',
     inputSchema: { type: 'object', properties: { skillId: { type: 'string' }, input: { type: 'object' } }, required: ['skillId', 'input'] },
   },
   {
@@ -107,84 +112,111 @@ async function handleToolCall(
     // ── 模型 ──
     case 'models_list': {
       const discoverer = deps?.discoverer;
-      if (!discoverer) return jsonResult({ info: 'Model discovery not connected' });
+      if (!discoverer) return json({ info: 'Model discovery not connected' });
       try {
         const models = await discoverer.discoverAll();
         const location = (args.location as string) || 'all';
-        const filtered = location === 'all' ? models : models.filter(m => m.location === location);
-        return jsonResult({ total: filtered.length, models: filtered });
-      } catch (err: any) {
-        return jsonResult({ error: err.message });
-      }
+        return json({ total: models.length, models: location === 'all' ? models : models.filter(m => m.location === location) });
+      } catch (err: any) { return json({ error: err.message }); }
     }
 
     case 'models_chat': {
       const scheduler = deps?.scheduler;
       const registry = deps?.registry;
-      if (!scheduler || !registry) return jsonResult({ info: 'Model scheduler not connected' });
+      if (!scheduler || !registry) return json({ info: 'Model scheduler not connected' });
       try {
         const model = args.model as string;
         const messages = args.messages as any[];
-        const selection = await scheduler.selectModel(
-          { task: messages?.[0]?.content || '', requiredCapabilities: ['chat'] },
-          { priority: model ? [model] : [] },
-        );
-        if (!selection) return jsonResult({ error: 'No available model found' });
+        const selection = model ? { model: { id: model } as any, providerName: '', confidence: 1, reasoning: '' }
+          : await scheduler.selectModel({ task: messages?.[0]?.content || '', requiredCapabilities: ['chat'] });
+        if (!selection) return json({ error: 'No available model' });
         const result = await registry.chat(selection.model.id, messages);
-        return jsonResult({ model: selection.model.id, content: result?.content || '' });
-      } catch (err: any) {
-        return jsonResult({ error: err.message });
-      }
+        return json({ model: selection.model.id, content: result?.content || '' });
+      } catch (err: any) { return json({ error: err.message }); }
     }
 
     case 'models_health': {
       const discoverer = deps?.discoverer;
-      if (!discoverer) return jsonResult({ status: 'no_discovery' });
+      if (!discoverer) return json({ status: 'no_discovery' });
       try {
-        const alive = await discoverer.anyAlive();
-        return jsonResult({ local_models_alive: alive, timestamp: Date.now() });
-      } catch (err: any) {
-        return jsonResult({ error: err.message });
-      }
+        return json({ local_models_alive: await discoverer.anyAlive(), timestamp: Date.now() });
+      } catch (err: any) { return json({ error: err.message }); }
     }
 
-    // ── 任务（TODO: 连接 gateway TaskManager）──
-    case 'tasks_submit':
-      return jsonResult({ taskId: crypto.randomUUID(), status: 'pending', info: 'TaskManager not yet connected' });
-    case 'tasks_status':
-      return jsonResult({ taskId: args.taskId, status: 'unknown', info: 'TaskManager not yet connected' });
-    case 'tasks_list':
-      return jsonResult({ tasks: [], info: 'TaskManager not yet connected' });
+    // ── 任务 ──
+    case 'tasks_submit': {
+      const tm = deps?.taskManager;
+      if (!tm) return json({ taskId: crypto.randomUUID(), status: 'pending', info: 'TaskManager not connected' });
+      try {
+        const task = await tm.createTask({ type: 'request', source: 'mcp', payload: args.payload || {}, id: crypto.randomUUID() } as any);
+        return json({ taskId: task.id, status: task.status });
+      } catch (err: any) { return json({ error: err.message }); }
+    }
 
-    // ── 技能（TODO: 连接 toolkit SkillLoader）──
-    case 'skills_list':
-      return jsonResult({ skills: [], info: 'SkillLoader not yet connected' });
-    case 'skills_search':
-      return jsonResult({ matches: [], info: 'SkillRouter not yet connected' });
-    case 'skills_execute':
-      return jsonResult({ skillId: args.skillId, result: '[placeholder]', info: 'SkillController not yet connected' });
+    case 'tasks_status': {
+      const tm = deps?.taskManager;
+      if (!tm) return json({ taskId: args.taskId, status: 'unknown', info: 'TaskManager not connected' });
+      try {
+        const task = tm.getTask(args.taskId as string);
+        return task ? json({ taskId: task.id, status: task.status, createdAt: task.createdAt })
+          : json({ taskId: args.taskId, status: 'not_found' });
+      } catch (err: any) { return json({ error: err.message }); }
+    }
+
+    case 'tasks_list': {
+      const tm = deps?.taskManager;
+      if (!tm) return json({ tasks: [], info: 'TaskManager not connected' });
+      try {
+        const status = args.status as string;
+        const tasks = tm.getAllTasks();
+        return json({ total: tasks.length, tasks: status ? tasks.filter((t: any) => t.status === status) : tasks });
+      } catch (err: any) { return json({ error: err.message }); }
+    }
+
+    // ── 技能 ──
+    case 'skills_list': {
+      const loader = deps?.skillLoader;
+      if (!loader) return json({ skills: [], info: 'SkillLoader not connected' });
+      try {
+        const skills = loader.getAll();
+        const category = args.category as string;
+        return json({ total: skills.length, skills: category ? skills.filter((s: any) => s.category === category) : skills });
+      } catch (err: any) { return json({ error: err.message }); }
+    }
+
+    case 'skills_search': {
+      const loader = deps?.skillLoader;
+      if (!loader) return json({ matches: [], info: 'SkillLoader not connected' });
+      try {
+        const task = args.task as string;
+        const results = loader.search(task);
+        return json({ matches: results, task });
+      } catch (err: any) { return json({ error: err.message }); }
+    }
+
+    case 'skills_execute': {
+      const controller = deps?.skillController;
+      if (!controller) return json({ skillId: args.skillId, result: '[placeholder]', info: 'SkillController not connected' });
+      try {
+        // SkillController.execute returns the result
+        const result = await (controller as any).execute(args.skillId as string, args.input || {});
+        return json({ skillId: args.skillId, result });
+      } catch (err: any) { return json({ error: err.message }); }
+    }
 
     // ── 系统 ──
     case 'system_health':
-      return jsonResult({
-        status: 'ok',
-        version: '2.0.0',
-        uptime: process.uptime(),
-        memory: process.memoryUsage(),
-      });
+      return json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), memory: process.memoryUsage() });
+
     case 'system_metrics':
-      return jsonResult({
-        metric: args.metric || 'all',
-        requests: { total: 0 },
-        info: 'MetricsCollector not yet connected',
-      });
+      return json({ metric: args.metric || 'all', requests: { total: 0 }, info: 'MetricsCollector not yet connected' });
 
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
 }
 
-function jsonResult(data: unknown): { content: { type: 'text'; text: string }[] } {
+function json(data: unknown): { content: { type: 'text'; text: string }[] } {
   return { content: [{ type: 'text', text: JSON.stringify(data) }] };
 }
 

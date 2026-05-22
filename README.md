@@ -1,243 +1,104 @@
-# @starlink-awaken/agentmesh
-
-<p align="center">
-  <img src="https://img.shields.io/npm/v/@starlink-awaken/agentmesh" alt="npm version">
-  <img src="https://img.shields.io/npm/l/@starlink-awaken/agentmesh" alt="license">
-  <img src="https://img.shields.io/github/stars/starlink-awaken/agentmesh" alt="stars">
-  <img src="https://img.shields.io/github/forks/starlink-awaken/agentmesh" alt="forks">
-</p>
-
-> Uniifed Agent Gateway - Multi-Agent Scheduler and Router
+# Agent Mesh v2.0 — 统一 Agent 调度基础设施
 
 [English](./README.md) | [中文](./README.zh-CN.md)
 
-## 概述
+> 三层统一架构：API 网关 + 编排引擎 + 能力库，本地和云端模型聚合调度。
 
-Agent Mesh 是一个强大的多智能体调度网关，能够协调和调度多种 AI Agent（包括 Claude Code、OpenClaw 以及其他本地安装的 Agent CLI 工具）。
+## 架构总览
 
-## 特性
-
-- 🤖 **多 Agent 支持** - 内置支持 24+ 种 AI Agent
-- 🎯 **智能路由** - 根据任务类型自动选择合适的 Agent
-- 🔄 **双向调度** - 支持 Agent 之间的相互调用
-- 👥 **多 Agent 协作** - 同一任务可调度多个 Agent
-- 📁 **上下文共享** - 文件级共享空间，支持上下文持久化
-- 🌐 **REST API** - 完整的 HTTP API 支持
-- 📡 **实时事件** - SSE/WebSocket 实时任务更新
-- 📊 **监控日志** - 内置指标收集和日志系统
+```
+agentmesh/  (monorepo — bun workspaces)
+├── packages/
+│   ├── core-types/         统一接口契约 (model/agent/task/events)
+│   ├── model-orchestrator/ 本地+云端模型聚合发现与动态调度
+│   ├── gateway/            Fastify HTTP API 网关
+│   ├── engine/             Honeycomb 多 Agent 编排引擎
+│   └── toolkit/            共享能力 SDK (LLM/Memory/Pattern/Skills)
+├── apps/
+│   ├── server/             MCP 服务器 + 进程管理器
+│   └── cli/                统一命令行
+└── config/
+    └── gateway.yaml        网关配置
+```
 
 ## 快速开始
 
-### 安装
+```bash
+# 克隆项目
+git clone https://github.com/starlink-awaken/agentmesh.git
+cd agentmesh
+
+# 安装依赖
+bun install
+
+# 类型检查（7 个包全部验证）
+bun run typecheck
+
+# 测试
+bun test
+```
+
+### 发现本地模型
 
 ```bash
-# 使用 bun
-bun add @starlink-awaken/agentmesh
-
-# 或使用 npm
-npm install @starlink-awaken/agentmesh
-
-# 或使用 yarn
-yarn add @starlink-awaken/agentmesh
+bun run apps/cli/src/index.ts model list
+bun run apps/cli/src/index.ts model health
 ```
 
-### CLI 全局安装
+### 启动 MCP 服务器
 
 ```bash
-npm install -g @starlink-awaken/agentmesh
-
-# 或者
-bun install -g @starlink-awaken/agentmesh
+bun run apps/server/src/mcp/index.ts
 ```
 
-### 启动服务
+### 启动 HTTP 网关
 
 ```bash
-# 使用 bun
-bun run src/index.ts
-
-# 或使用 CLI
-agent-gateway start
-
-# 或指定端口
-agent-gateway start --port 8080
+cd packages/gateway && bun run src/index.ts
 ```
 
-### 使用 Docker
+## Model Orchestrator
 
-```bash
-# 构建镜像
-docker build -t agentmesh .
+本地和云端模型的统一聚合与动态调度。
 
-# 运行容器
-docker run -p 3000:3000 agentmesh
-```
+### 支持的 Provider
 
-## 使用方法
+| Provider | 位置 | 发现方式 |
+|----------|------|----------|
+| Ollama | 本地 | `http://localhost:11434/api/tags` |
+| LM Studio | 本地 | `http://localhost:1234/v1/models` |
+| llama.cpp | 本地 | 端口扫描 (8080/8081/8082/8000) |
+| OpenAI | 云端 | API |
+| Anthropic | 云端 | API |
+| OpenRouter | 云端 | API |
 
-### CLI 命令
+### 调度策略
 
-```bash
-# 列出所有可用 Agent
-agent-gateway agents
+- **cost-first**: 按 token 单价升序
+- **speed-first**: 按平均延迟升序
+- **capability-first**: 按能力匹配度 + contextWindow
+- **balanced**: 加权综合（成本 30% + 速度 30% + 能力 40%）
 
-# 提交通用任务（自动路由）
-agent-gateway task "帮我写一个排序算法"
-
-# 提交任务到指定 Agent
-agent-gateway to claude-code "帮我 review 这段代码"
-
-# 创建共享空间
-agent-gateway space create-space
-
-# 列出所有任务
-agent-gateway tasks
-
-# 检查 Gateway 状态
-agent-gateway health
-```
-
-### REST API
-
-```bash
-# 健康检查
-curl http://localhost:3000/health
-
-# 提交任务
-curl -X POST http://localhost:3000/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"payload": {"task": "帮我写一个排序算法"}}'
-
-# 获取 Agent 列表
-curl http://localhost:3000/agents
-
-# 创建共享空间
-curl -X POST http://localhost:3000/spaces \
-  -H "Content-Type: application/json" \
-  -d '{"metadata": {"name": "项目A"}}'
-```
-
-### JavaScript/TypeScript
-
-```typescript
-import { AgentGateway } from '@starlink-awaken/agentmesh';
-
-const gateway = new AgentGateway({
-  port: 3000,
-  agents: [
-    { id: 'claude-code', command: 'claude', args: ['-p'] }
-  ]
-});
-
-await gateway.start();
-
-// 提交任务
-const task = await gateway.submitTask({
-  payload: {
-    task: '帮我写一个排序算法'
-  }
-});
-
-console.log('Task ID:', task.id);
-```
-
-## 配置
-
-### 路由规则
-
-在 `config/gateway.yaml` 中配置任务路由规则：
-
-```yaml
-routing:
-  rules:
-    - name: code-review
-      keywords: [review, code review, pr review]
-      agent: claude-code
-      priority: 10
-
-    - name: browser-automation
-      keywords: [browser, scrape, click]
-      agent: openclaw
-      priority: 10
-```
-
-### Agent 配置
-
-```yaml
-agents:
-  - id: claude-code
-    name: Claude Code
-    type: claude-code
-    capabilities:
-      - code-generation
-      - code-review
-
-  - id: my-agent
-    name: My Custom Agent
-    type: http
-    endpoint: http://localhost:8080
-```
-
-## 支持的 Agent
-
-| Agent | 描述 | 能力 |
-|-------|------|------|
-| claude-code | Anthropic Claude Code | 代码生成、审查、重构 |
-| openclaw | OpenClaw | 浏览器自动化、网页抓取 |
-| cursor | Cursor | 代码补全、聊天 |
-| windsurf | Windsurf | Agent 编码、Flow 状态 |
-| aider | Aider | Git 集成编辑、多文件修改 |
-| ollama | Ollama | 本地 LLM、隐私优先 |
-| perplexity | Perplexity | 研究助手、网络搜索 |
-| grok | xAI Grok | 推理、代码生成 |
-| ... | 更多 Agent | 见文档 |
-
-## 架构
+## 包依赖
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Agent Mesh Gateway                       │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
-│  │  Task API   │  │  Event Bus  │  │  Discovery │       │
-│  │  (REST/WS) │  │  (Pub/Sub) │  │   Service  │       │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘       │
-│         │                 │                 │               │
-│  ┌──────┴────────────────┴─────────────────┴──────┐      │
-│  │              Context Manager                     │      │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐       │      │
-│  │  │  Memory │  │  Files  │  │VectorDB │       │      │
-│  │  │  Cache  │  │ Persist │  │ Storage │       │      │
-│  │  └─────────┘  └─────────┘  └─────────┘       │      │
-│  └──────────────────────┬──────────────────────────┘      │
-└─────────────────────────┼──────────────────────────────────┘
-                          │
-        ┌─────────────────┼─────────────────┐
-        ▼                 ▼                 ▼
-   ┌─────────┐       ┌─────────┐       ┌─────────┐
-   │ Claude  │       │  Open   │       │  Other  │
-   │  Code   │◄────►│  Claw   │◄────►│  Agents │
-   └─────────┘       └─────────┘       └─────────┘
+apps/cli → apps/server → packages/gateway → packages/engine → packages/toolkit
+                 ↘              ↙              ↙
+            packages/model-orchestrator
+                 ↕
+           packages/core-types (零依赖)
 ```
 
-## 文档
+## 测试
 
-- [API 文档](./docs/api.md)
-- [配置参考](./config/gateway.yaml)
-- [Agent 开发指南](./docs/agent-adapter.md)
-
-## 贡献
-
-欢迎贡献代码！请阅读 [贡献指南](./CONTRIBUTING.md) 了解如何参与项目开发。
+| 包 | 测试数 |
+|----|--------|
+| engine | 92 |
+| toolkit | 41 |
+| gateway | 9 |
+| model-orchestrator | 2 |
+| **总计** | **144** |
 
 ## 许可证
 
-MIT License - 请查看 [LICENSE](./LICENSE) 文件。
-
-## 赞助
-
-如果你喜欢这个项目，请考虑赞助我们。
-
----
-
-Made with ❤️ by [Starlink Awaken](https://github.com/starlink-awaken)
+MIT

@@ -11,6 +11,7 @@ export { OpenRouterProvider } from './providers/openrouter.js';
 export { LocalModelDiscoverer } from './discovery/local.js';
 export { ModelScheduler } from './scheduler.js';
 export { ModelRegistry } from './registry.js';
+export { initFromConfig, loadModelsConfig } from './loader.js';
 
 export type {
   ProviderConfig,

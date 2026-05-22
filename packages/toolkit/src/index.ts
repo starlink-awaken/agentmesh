@@ -157,6 +157,7 @@ export type {
 export {
   SkillLoader,
   SkillRouter,
+  SkillController,
   createSkillSystem,
   builtInSkills,
 } from './skills/index.js';

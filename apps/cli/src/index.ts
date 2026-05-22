@@ -31,16 +31,21 @@ async function main() {
       break;
 
     case 'model': {
-      const { LocalModelDiscoverer } = await import('@agentmesh/model-orchestrator');
-      const discoverer = new LocalModelDiscoverer();
+      const { initFromConfig } = await import('@agentmesh/model-orchestrator');
       switch (subcommand) {
-        case 'list':
-          const models = await discoverer.discoverAll();
+        case 'list': {
+          const { registry } = initFromConfig();
+          await registry.refresh();
+          const models = registry.getAll();
           console.log(JSON.stringify(models, null, 2));
           break;
-        case 'health':
-          console.log(`Local models alive: ${await discoverer.anyAlive()}`);
+        }
+        case 'health': {
+          const { registry } = initFromConfig();
+          const models = await registry.refresh();
+          console.log(`在线: ${models.filter(m => m.isAvailable).length}/${models.length}`);
           break;
+        }
         default:
           console.log('Usage: agentmesh model list|health');
       }

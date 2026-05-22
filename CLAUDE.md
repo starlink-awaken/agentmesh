@@ -1,73 +1,109 @@
 # CLAUDE.md
 
+## 项目结构
+
+```
+agentmesh/  (monorepo 根 — bun workspaces)
+├── packages/
+│   ├── core-types/         @agentmesh/core-types      统一接口契约
+│   ├── model-orchestrator/ @agentmesh/model-orch      模型聚合调度
+│   ├── gateway/            @agentmesh/gateway         Fastify HTTP 网关
+│   ├── engine/             @agentmesh/engine          Honeycomb 编排引擎
+│   └── toolkit/            @agentmesh/toolkit         共享能力 SDK
+├── apps/
+│   ├── server/             MCP 服务器 + 进程管理器
+│   └── cli/                统一 CLI
+└── config/
+    └── gateway.yaml        统一配置
+```
+
 ## 命令
 
 ```sh
-bun run dev          # 启动开发服务器 (src/index.ts)
-bun run start        # 同上
-bun run build        # tsc 编译到 dist/
-bun test             # 运行所有测试 (bun test)
-bun test tests/model-gateway/router.test.ts  # 单个测试
+bun install              # 安装所有包依赖
+bun run build             # 编译所有包 (npm -ws run build)
+bun run typecheck         # 所有包类型检查
+bun test                  # 所有包测试
+
+# 单包操作
+cd packages/gateway && bun run dev       # gateway 开发模式
+cd packages/model-orchestrator && bun test  # model-orchestrator 测试
+cd apps/server && bun run src/mcp/index.ts  # 启动 MCP 服务器 (stdio)
+cd apps/cli && bun run src/index.ts model list  # CLI 查模型
+```
+
+## 包依赖关系（严格单向）
+
+```
+apps/cli → apps/server → packages/gateway → packages/engine → packages/toolkit
+                 ↘              ↙              ↙
+            packages/model-orchestrator
+                 ↕
+           packages/core-types
 ```
 
 ## 架构
 
-**Agent Mesh Gateway** — Fastify 多智能体调度网关 + 模型网关。
+**Agent Mesh Gateway v2.0** — 三层统一架构：
 
-### 路由拓扑 (全 /v1 版本化)
+- **API Layer**: `gateway` (Fastify HTTP) + `server` (MCP) + `cli` — 对外访问
+- **Engine Layer**: `engine` (Honeycomb Orchestrator) — 编排和工作流
+- **Capability Layer**: `toolkit` — LLM 调用、Pattern、Memory、Skills、Tools
 
+### 核心模块
+
+- **gateway** (`packages/gateway/src/`): 原 agentmesh v1.5, Fastify HTTP 网关
+  - `/v1/*` → apiRoutes/sseRoutes/hermesRoutes
+  - `/v1/chat/completions` → modelGatewayRoutes
+  - **EventBus** (`core/event-bus.ts`): 基于 @agentmesh/toolkit EventEmitter 的桥接
+  - **Retry** (`model-gateway/retry.ts`): 基于 @agentmesh/toolkit RetryableClient 的桥接
+
+- **engine** (`packages/engine/src/`): 原 honeycomb v2.0, 编排引擎
+  - Orchestrator + PhaseStateMachine + DSL Compiler + AgentRunner + MessageBus
+  - 桥接: 使用 @agentmesh/toolkit ToolRegistry
+
+- **toolkit** (`packages/toolkit/src/`): 原 agent-toolkit v1.0, 共享能力层
+  - AlgorithmEngine(7-phase) + PatternLoader + 16 Agent Design Patterns
+  - SkillLoader/Router/Executor + MemoryStore + ToolRegistry
+  - LLM 多 Provider (OpenAI/Anthropic/Ollama) + Middleware + Observability
+
+- **model-orchestrator** (`packages/model-orchestrator/src/`): 新项目
+  - 6 个 ModelProvider: ollama/lm-studio/llama-cpp/openai/anthropic/openrouter
+  - LocalModelDiscoverer: 自动探测本地模型
+  - ModelScheduler: cost/speed/capability/balanced 4 策略调度
+  - ModelRegistry: Provider 注册 + 模型管理
+
+### 对外访问
+
+- **MCP Server** (`apps/server/src/mcp/`): 11 个 MCP tools
+  - `models_list/chat/health` → model-orchestrator 真实实现
+  - `tasks_submit/status/list` → 占位（待连接 gateway TaskManager）
+  - `skills_list/search/execute` → 占位（待连接 toolkit SkillController）
+  - `system_health/metrics` → 进程级
+
+- **CLI** (`apps/cli/src/`): 统一命令行
+  - `agentmesh model list|health` → model-orchestrator
+  - `agentmesh start|mcp|status`
+
+## 构建 & 测试
+
+```sh
+# 全部编译
+cd packages/core-types && bun run build    # core-types 必须先编译（被所有包依赖）
+cd packages/toolkit && bun run build       # toolkit 第二（被 gateway/engine 依赖）
+cd packages/model-orchestrator && bun run build  # 第三
+
+# 全部类型检查
+bun run typecheck
 ```
-/v1/health          → apiRoutes
-/v1/tasks           → apiRoutes (CRUD)
-/v1/spaces          → apiRoutes (CRUD)
-/v1/agents          → apiRoutes (list/register)
-/v1/events          → sseRoutes (SSE 实时事件流)
-/v1/hermes/task     → hermesRoutes (webhook)
-/v1/models          → modelGatewayRoutes (OpenAI 兼容)
-/v1/chat/completions → modelGatewayRoutes (OpenAI 兼容)
-/v1/responses       → modelGatewayRoutes (Codex 兼容)
-/v1/model-gateway/* → modelGatewayRoutes (管理: health/quota/stats)
-```
 
-### 智能体系统 (`src/core/` + `src/adapters/`)
+## 关键配置
 
-任务流：`POST /v1/tasks → TaskManager.processTask() → Router.route() → Adapter.invoke()`
+`config/gateway.yaml` — gateway 和模型网关共享配置。
+模型 Provider 配置在 `packages/model-orchestrator/` 中编程式配置。
 
-- **Router** (`core/router.ts`): 关键词匹配路由，按 `config/gateway.yaml` 中 routing.rules 优先级排序。支持 direct/broadcast 策略
-- **AgentRegistry** (`core/agent-registry.ts`): 25+ Agent 默认定义在 `core/agents.default.ts`，YAML 配置覆盖
-- **Adapters** (`adapters/`): `BaseAdapter → ClaudeCodeAdapter / OpenClawAdapter / ProcessAdapter`
-- **TaskManager** (`core/task-manager.ts`): 任务生命周期 (pending→assigned→running→completed/failed)
-- **ContextManager** (`core/context-manager.ts`): L1 内存 → L2 文件系统 → L3 ChromaDB，路径来自 config.dataDir
-- **EventBus** (`core/event-bus.ts`): 9 种事件类型的 pub/sub
+## 类型
 
-### 模型网关 (`src/model-gateway/`)
-
-请求流：`POST /v1/chat/completions → resolveProvider(model) → 断路保护 → 限流 → 重试 → 上游`
-
-- **Router** (`model-gateway/router.ts`): 模型名模式匹配 → 回退链 → 首个可用 provider
-- **断路保护** (`circuit-breaker.ts`): CLOSED→OPEN(3次失败)→HALF_OPEN(30s)→CLOSED
-- **重试** (`retry.ts`): 指数退避 500ms→10s, 最多3次, 仅限 429/5xx
-- **限流** (`rate-limit.ts`): 令牌桶, 默认 60rpm(chat)/30rpm(responses), 从 YAML 可配置
-- **Providers** (`providers.ts`): 代理转发 + Codex Responses API SSE 流转换
-- **Quota** (`quota.ts`): 通过 codexbar CLI 查询配额
-
-### 配置系统 (`core/config.ts`)
-
-`config/gateway.yaml` → `GatewayConfig` 类型。模型网关配置通过 `models` 节注入：providers、model_routing、fallback_chain、defaults (circuit_breaker/retry/rate_limit)。YAML snake_case → TS camelCase 映射在 `index.ts` 边界处完成。
-
-### CLI (`src/cli.ts`)
-
-start, setup, connect/disconnect, health, status, models, quota, agents, tasks, config, doctor, hermes
-
-## 关键模式
-
-- **适配器模式**: Agent 执行通过 `AgentAdapter` 接口。新增 Agent = 新增适配器或 ProcessAdapter + 配置
-- **事件驱动**: 任务状态变更 → EventBus → SSE 客户端
-- **配置驱动**: Agent/Provider 均通过 `gateway.yaml` 配置。CLI connect 通过 `ToolAdapter` 接口 (检测/读取/生成配置) 修改外部工具
-- **Fastify** 是唯一 HTTP 框架。不要引入 express/Bun.serve
-
-## 测试
-
-`bun test`。测试镜像 src 结构：`tests/core/`、`tests/model-gateway/`。
-
-类型：`src/types/index.ts` (通信协议)、`src/core/config.ts` (配置)、`src/model-gateway/types.ts` (模型网关)
+- `packages/core-types/src/` — 共享类型定义 (model/agent/task/events)
+- `packages/gateway/src/types/` — 原 agentmesh 类型
+- `packages/model-orchestrator/src/types.ts` — 模型编排特有类型

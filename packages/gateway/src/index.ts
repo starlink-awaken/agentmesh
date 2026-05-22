@@ -156,3 +156,6 @@ main();
  * - agentmesh → honeycomb: agent orchestration patterns
  */
 
+// Re-exports for MCP server integration
+export type { TaskManager } from './core/task-manager.js';
+
