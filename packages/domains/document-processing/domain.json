@@ -1,6 +1,34 @@
 {
   "name": "document-processing",
-  "description": "Document processing domain",
+  "description": "Document processing domain - technical documentation, compliance documents, API documentation, user guides, multi-format conversion.",
   "archetype": "document-processing",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "phase_prompts": {
+    "research": "Research document requirements, target audience, compliance standards.",
+    "decision": "Define documentation structure, choose format and delivery method.",
+    "execution": "Create documents following established templates and standards.",
+    "feedback": "Technical accuracy review, clarity and readability assessment.",
+    "delivery": "Final formatting for target platforms, generate multiple format versions."
+  },
+  "agent_overrides": {
+    "technical-writer": { "enabled": true, "priority": 10 },
+    "compliance-specialist": { "enabled": true, "priority": 9 }
+  },
+  "defaults": {
+    "complexity": "standard",
+    "token_budget": 250000,
+    "max_concurrent_agents": 5
+  },
+  "templates": {
+    "technical-guide": "templates/technical-guide.md",
+    "api-documentation": "templates/api-documentation.md"
+  },
+  "quality_gates": [
+    {
+      "name": "Technical Accuracy",
+      "phase": "feedback",
+      "criteria": ["All technical claims verified"],
+      "mandatory": true
+    }
+  ]
 }

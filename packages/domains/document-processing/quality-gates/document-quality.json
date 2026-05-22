@@ -1,0 +1,39 @@
+[
+  {
+    "name": "Technical Accuracy",
+    "phase": "feedback",
+    "mandatory": true,
+    "description": "Ensures all technical claims, code samples, and factual statements are verified and accurate",
+    "criteria": [
+      {
+        "id": "claim-verification",
+        "name": "Technical Claim Verification",
+        "description": "All technical claims are backed by verifiable sources",
+        "pass_condition": "unverified_claims == 0",
+        "mandatory": true
+      },
+      {
+        "id": "code-validity",
+        "name": "Code Sample Validity",
+        "description": "All code snippets are syntactically correct and produce expected output",
+        "pass_condition": "code_snippet_errors == 0",
+        "mandatory": true
+      }
+    ]
+  },
+  {
+    "name": "Compliance Review",
+    "phase": "delivery",
+    "mandatory": true,
+    "description": "Verifies documentation meets regulatory and compliance requirements",
+    "criteria": [
+      {
+        "id": "regulatory-check",
+        "name": "Regulatory Compliance Check",
+        "description": "Documentation covers all required regulatory disclosures and disclaimers",
+        "pass_condition": "compliance_gaps == 0",
+        "mandatory": true
+      }
+    ]
+  }
+]

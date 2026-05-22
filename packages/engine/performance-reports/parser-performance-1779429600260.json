@@ -1,0 +1,94 @@
+{
+  "test": "parser-performance",
+  "timestamp": 1779429600260,
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v24.3.0",
+    "cpuCount": 18,
+    "totalMemory": "36MB",
+    "timestamp": "2026-05-22T06:00:00.260Z"
+  },
+  "results": [
+    {
+      "sample": "simple-agent",
+      "result": {
+        "nodeCount": 7,
+        "timeMs": 0.002345420000000047,
+        "throughput": 2984.5400823732466
+      }
+    },
+    {
+      "sample": "minimal-agent",
+      "result": {
+        "nodeCount": 7,
+        "timeMs": 0.000825839999999971,
+        "throughput": 7000
+      }
+    },
+    {
+      "sample": "data-processor",
+      "result": {
+        "nodeCount": 38,
+        "timeMs": 0.001716250000000059,
+        "throughput": 22141.296431171853
+      }
+    },
+    {
+      "sample": "transform-agent",
+      "result": {
+        "nodeCount": 33,
+        "timeMs": 0.0011924999999999386,
+        "throughput": 27672.955974844193
+      }
+    },
+    {
+      "sample": "conditional-router",
+      "result": {
+        "nodeCount": 46,
+        "timeMs": 0.0013762499999999988,
+        "throughput": 33424.15985467759
+      }
+    },
+    {
+      "sample": "resilient-processor",
+      "result": {
+        "nodeCount": 48,
+        "timeMs": 0.0016004099999999254,
+        "throughput": 29992.31446941861
+      }
+    },
+    {
+      "sample": "enterprise-workflow",
+      "result": {
+        "nodeCount": 106,
+        "timeMs": 0.0024216700000000914,
+        "throughput": 43771.44697667147
+      }
+    },
+    {
+      "sample": "multi-domain-orchestrator",
+      "result": {
+        "nodeCount": 81,
+        "timeMs": 0.002498329999999953,
+        "throughput": 32421.65766732238
+      }
+    },
+    {
+      "sample": "parallel-processor",
+      "result": {
+        "nodeCount": 41,
+        "timeMs": 0.0014070900000000108,
+        "throughput": 29138.150367069404
+      }
+    },
+    {
+      "sample": "batch-processor",
+      "result": {
+        "nodeCount": 38,
+        "timeMs": 0.0011395799999999667,
+        "throughput": 33345.61856122529
+      }
+    }
+  ]
+}

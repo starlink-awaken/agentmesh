@@ -1,1 +1,46 @@
-{"name": "quality-check", "phase": "review", "rules": []}
+[
+  {
+    "name": "Visual Consistency",
+    "phase": "execution",
+    "mandatory": true,
+    "description": "Ensures all visual assets maintain consistent art style, color palette, and composition standards",
+    "criteria": [
+      {
+        "id": "art-style-consistency",
+        "name": "Art Style Consistency",
+        "description": "All frames and assets adhere to the defined art style guide",
+        "pass_condition": "art_style_deviation == 0",
+        "mandatory": true
+      },
+      {
+        "id": "color-palette-compliance",
+        "name": "Color Palette Compliance",
+        "description": "Colors used fall within the approved palette",
+        "pass_condition": "out_of_palette_colors == 0",
+        "mandatory": true
+      },
+      {
+        "id": "resolution-standard",
+        "name": "Resolution and Format Standard",
+        "description": "All outputs match target platform specifications",
+        "pass_condition": "resolution_mismatch == 0 && format_compliant == true",
+        "mandatory": false
+      }
+    ]
+  },
+  {
+    "name": "Narrative Coherence",
+    "phase": "feedback",
+    "mandatory": false,
+    "description": "Verifies the visual narrative flows logically and supports the story",
+    "criteria": [
+      {
+        "id": "shot-sequence-logic",
+        "name": "Shot Sequence Logic",
+        "description": "Shot transitions and sequence follow narrative logic",
+        "pass_condition": "sequence_continuity_errors == 0",
+        "mandatory": true
+      }
+    ]
+  }
+]

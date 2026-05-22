@@ -109,7 +109,7 @@ export function createMCPServer(deps?: MCPServerDeps): Server {
 
 // ── Tool 处理 ──
 
-async function handleToolCall(
+export async function handleToolCall(
   name: string,
   args: Record<string, unknown>,
   deps?: MCPServerDeps,

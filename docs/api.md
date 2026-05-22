@@ -18,6 +18,20 @@ Health check with agent status overview.
 }
 ```
 
+### `GET /v1/health/detailed`
+Detailed health check with circuit breaker, vector store, config info.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "timestamp": 1778935574177,
+  "circuit_breakers": { "deepseek": "CLOSED", "ollama": "CLOSED" },
+  "vector_store": { "type": "memory", "count": 12 },
+  "config": { "models_providers_count": 4 }
+}
+```
+
 ### `GET /model-gateway/health`
 Model gateway health with provider availability and quota summary.
 
@@ -64,7 +78,7 @@ Real-time quota data from codexbar. Cached for 60 seconds.
 ## Model Gateway
 
 ### `GET /v1/models`
-List available models across all configured providers.
+List available models. Primary source: model-orchestrator dynamic discovery (6 providers). Falls back to static config when discovery returns 0 results.
 
 **Response:**
 ```json
@@ -81,7 +95,7 @@ List available models across all configured providers.
 ```
 
 ### `POST /v1/chat/completions`
-Standard OpenAI-compatible chat completions. Supports streaming (SSE).
+Standard OpenAI-compatible chat completions. Primary path uses **model-orchestrator scheduler** (circuit breaker + retry + strategy-based selection). Falls back to old resolveProvider() if scheduler returns no match. Supports streaming (SSE).
 
 **Request:**
 ```json
@@ -122,7 +136,8 @@ Standard OpenAI-compatible chat completions. Supports streaming (SSE).
 }
 ```
 
-**Streaming:** Returns `text/event-stream` with SSE chunks.
+### `POST /v1/chat/completions` (Streaming)
+Returns `text/event-stream` with SSE chunks. Internally uses `sessStart + chunkIndex` for chunk IDs instead of per-chunk `Date.now()`.
 
 ### `POST /v1/responses`
 Codex Desktop Responses API adapter. Converts between Responses API and Chat Completions.
@@ -132,7 +147,6 @@ Codex Desktop Responses API adapter. Converts between Responses API and Chat Com
 {
   "model": "deepseek-v4-pro",
   "input": [
-    {"role": "system", "content": "You are a coding assistant."},
     {"role": "user", "content": "Write a sorting function"}
   ],
   "instructions": "Be concise.",
@@ -154,32 +168,98 @@ Codex Desktop Responses API adapter. Converts between Responses API and Chat Com
       "content": [
         {
           "type": "output_text",
-          "text": "Here is a sorting function...\n\n```python\ndef sort(arr):...\n```"
+          "text": "Here is a sorting function..."
         }
       ]
     }
   ],
-  "usage": {
-    "input_tokens": 30,
-    "output_tokens": 150,
-    "total_tokens": 180
-  }
+  "usage": { "input_tokens": 30, "output_tokens": 150, "total_tokens": 180 }
 }
 ```
 
-**Input Mapping:**
-- `input[].role` → `messages[].role`
-- `input[].content` (text/list) → `messages[].content` (string)
-- `input[].type: "message"` → message entry
-- `instructions` → prepended system message
+## Model Orchestrator Bridge
 
-**Output Mapping:**
-- Chat `choices[0].message.content` → Responses `output[].content[].text`
-- Chat `choices[0].message.tool_calls` → Responses `output[].type: "function_call"`
+### `GET /v1/model-orchestrator/models`
+List all models via model-orchestrator's dynamic discovery.
+
+**Response:**
+```json
+{
+  "total": 8,
+  "models": [
+    {"id": "deepseek-chat", "provider": "deepseek", "location": "cloud"},
+    {"id": "qwen3:14b", "provider": "ollama", "location": "local"}
+  ]
+}
+```
+
+### `POST /v1/model-orchestrator/chat`
+Chat through model-orchestrator's scheduler (circuit breaker + retry + strategy routing).
+
+**Request:**
+```json
+{
+  "model": "deepseek-chat",
+  "messages": [{"role": "user", "content": "Hello!"}],
+  "temperature": 0.7
+}
+```
+
+**Response:**
+```json
+{
+  "model": "deepseek-chat",
+  "content": "Hello! How can I help you today?"
+}
+```
+
+### `GET /v1/model-orchestrator/chat/stream`
+SSE streaming through model-orchestrator. Uses AbortController for cleanup.
+
+## Skills
+
+### `GET /v1/skills`
+List available skills from toolkit SkillLoader.
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `category` | string | Filter by category |
+
+**Response:**
+```json
+{
+  "total": 16,
+  "skills": [
+    {"id": "code-review", "name": "Code Review", "category": "development"}
+  ]
+}
+```
+
+### `POST /v1/skills/:skillId/execute`
+Execute a skill via SkillController.
+
+**Request:**
+```json
+{
+  "input": { "task": "Review this code", "files": ["src/index.ts"] }
+}
+```
+
+**Response:**
+```json
+{
+  "skillId": "code-review",
+  "result": { "status": "completed", "findings": [] }
+}
+```
+
+### `POST /v1/chat/completions` (Skill Router)
+Chat completions endpoint can trigger skill-based routing for specific patterns.
 
 ## Agent Management
 
-### `GET /agents`
+### `GET /v1/agents`
 List all registered agents.
 
 **Response:**
@@ -196,7 +276,7 @@ List all registered agents.
 ]
 ```
 
-### `POST /agents`
+### `POST /v1/agents`
 Register a new agent.
 
 **Request:**
@@ -210,7 +290,7 @@ Register a new agent.
 }
 ```
 
-### `POST /tasks`
+### `POST /v1/tasks`
 Submit a task for agent execution.
 
 **Request:**
@@ -226,10 +306,10 @@ Submit a task for agent execution.
 }
 ```
 
-### `GET /tasks`
+### `GET /v1/tasks`
 List all tasks.
 
-### `GET /tasks/:taskId`
+### `GET /v1/tasks/:taskId`
 Task status and result.
 
 **Response:**
@@ -244,9 +324,12 @@ Task status and result.
 }
 ```
 
+### `POST /v1/tasks/:taskId/cancel`
+Cancel a running task.
+
 ## Spaces
 
-### `POST /spaces`
+### `POST /v1/spaces`
 Create a shared context space.
 
 **Request:**
@@ -258,8 +341,46 @@ Create a shared context space.
 
 **Response:** `{ "space_id": "space-xxx" }`
 
-### `GET /spaces/:spaceId`
+### `GET /v1/spaces/:spaceId`
 Shared space details.
+
+## Scheduler
+
+### `POST /v1/scheduler`
+Create a cron-based scheduled task.
+
+**Request:**
+```json
+{
+  "cron": "0 9 * * *",
+  "task": { "type": "request", "payload": { "task": "Daily report" } }
+}
+```
+
+### `GET /v1/scheduler`
+List all scheduled tasks.
+
+### `DELETE /v1/scheduler/:id`
+Delete a scheduled task.
+
+## Pipeline
+
+### `POST /v1/pipeline`
+Multi-agent sequential pipeline with domain template support.
+
+**Request:**
+```json
+{
+  "domain": "visual-production",
+  "phases": ["research", "decision", "execution"],
+  "agents": ["visual-director", "storyboard-artist"]
+}
+```
+
+## Dashboard
+
+### `GET /dashboard`
+Web dashboard with dark theme, auto-refresh. Real-time system status.
 
 ## Error Format
 
@@ -281,13 +402,15 @@ Shared space details.
 | `SPACE_NOT_FOUND` | 404 | Space ID not found |
 | Provider errors | 502 | Upstream provider error |
 | No provider | 503 | All providers unavailable |
+| Circuit open | 503 | Provider circuit breaker OPEN |
 
 ## Routing
 
 The model router selects providers based on:
 1. Model name pattern matching
-2. Quota availability (via codexbar)
-3. API key presence
-4. Fallback chain priority
+2. **Model-Orchestrator scheduler** (primary): circuit breaker + retry + strategy-based
+3. Quota availability (via codexbar)
+4. API key presence
+5. Fallback chain priority
 
-See [Configuration Guide](./configuration.md) for routing rules.
+See [Configuration Guide](./configuration.md) for routing rules and model config.

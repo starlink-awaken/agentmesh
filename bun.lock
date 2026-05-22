@@ -8,6 +8,15 @@
         "typescript": "^5",
       },
     },
+    "__e2e__": {
+      "name": "@agentmesh/e2e",
+      "version": "2.0.0",
+      "dependencies": {
+        "fastify": "^5.7.4",
+        "uuid": "^13.0.0",
+        "yaml": "^2.9.0",
+      },
+    },
     "apps/cli": {
       "name": "@agentmesh/cli",
       "version": "2.0.0",
@@ -64,6 +73,7 @@
       },
       "dependencies": {
         "@agentmesh/core-types": "workspace:*",
+        "@agentmesh/engine": "workspace:*",
         "@agentmesh/model-orchestrator": "workspace:*",
         "@agentmesh/toolkit": "workspace:*",
         "@fastify/cors": "^11.2.0",
@@ -82,20 +92,6 @@
         "@types/uuid": "^11.0.0",
         "@types/ws": "^8.18.1",
         "bun-types": "^1.3.14",
-      },
-    },
-    "packages/model-gateway": {
-      "name": "@starlink-awaken/model-gateway",
-      "version": "1.0.0",
-      "dependencies": {
-        "fastify": "^5.7.4",
-        "pino": "^10.3.1",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
       },
     },
     "packages/model-orchestrator": {
@@ -128,6 +124,8 @@
     "@agentmesh/cli": ["@agentmesh/cli@workspace:apps/cli"],
 
     "@agentmesh/core-types": ["@agentmesh/core-types@workspace:packages/core-types"],
+
+    "@agentmesh/e2e": ["@agentmesh/e2e@workspace:__e2e__"],
 
     "@agentmesh/engine": ["@agentmesh/engine@workspace:packages/engine"],
 
@@ -168,8 +166,6 @@
     "@sec-ant/readable-stream": ["@sec-ant/readable-stream@0.4.1", "", {}, "sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg=="],
 
     "@sindresorhus/merge-streams": ["@sindresorhus/merge-streams@4.0.0", "", {}, "sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ=="],
-
-    "@starlink-awaken/model-gateway": ["@starlink-awaken/model-gateway@workspace:packages/model-gateway"],
 
     "@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 

@@ -2,137 +2,127 @@
 
 ## System Overview
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                    Tool Consumers                         │
-│  Codex Desktop  Claude Code  Gemini CLI  Other Tools     │
-└────────────┬─────────────────────────────────────────────┘
-             │  /v1/chat/completions  /v1/responses
-             ▼
-┌──────────────────────────────────────────────────────────┐
-│                 Agent Mesh Gateway :3000                   │
-│                                                           │
-│  ┌──────────────────┐    ┌──────────────────────┐       │
-│  │  Model Gateway    │    │  Agent Orchestrator   │       │
-│  │  ┌──────────────┐ │    │  ┌──────────────────┐ │       │
-│  │  │ Quota Probe  │ │    │  │  Agent Registry  │ │       │
-│  │  │ (codexbar)   │ │    │  │  (25+ adapters)  │ │       │
-│  │  └──────┬───────┘ │    │  └────────┬─────────┘ │       │
-│  │         │         │    │           │           │       │
-│  │  ┌──────┴───────┐ │    │  ┌────────┴─────────┐ │       │
-│  │  │ Model Router │ │    │  │  Task Router     │ │       │
-│  │  │ (fallback)   │ │    │  │  (keyword match) │ │       │
-│  │  └──────┬───────┘ │    │  └────────┬─────────┘ │       │
-│  │         │         │    │           │           │       │
-│  │  ┌──────┴───────┐ │    │  ┌────────┴─────────┐ │       │
-│  │  │Provider Client│ │    │  │ Event Bus        │ │       │
-│  │  │(HTTP Stream) │ │    │  │ (Pub/Sub)        │ │       │
-│  │  └──────────────┘ │    │  └──────────────────┘ │       │
-│  └──────────────────┘    └──────────────────────┘       │
-│                                                           │
-│  ┌──────────────────────────────────────────────────┐    │
-│  │              Context Manager                       │    │
-│  │  Shared Spaces  File Cache  Vector Store (ChromaDB)│    │
-│  └──────────────────────────────────────────────────┘    │
-└──────────┬───────────────────────────────────────────────┘
-           │
-    ┌──────┼──────┬──────────┐
-    ▼      ▼      ▼          ▼
-  DeepSeek OpenAI OpenRouter Ollama
-```
+Three-layer unified architecture for Agent Mesh Gateway v2.0.
 
-## Model Gateway Layer
+## Model Orchestrator Layer
 
-### Quota Probe (`quota.ts`)
-- Calls `codexbar usage --format json --provider all`
-- Caches results for 60 seconds
-- Parses provider-specific quota formats:
-  - codex: credits.remaining
-  - deepseek: balance in ¥ (from resetDescription)
-  - openrouter: openRouterUsage.balance
-  - ollama: always available
+The Model Orchestrator (`packages/model-orchestrator/`) provides:
+- 6 Model Providers: Ollama, LM Studio, llama.cpp, OpenAI, Anthropic, OpenRouter
+- LocalModelDiscoverer: auto-detect local models via API probes + port scanning
+- ModelRegistry: provider registration, model lifecycle, circuit breaker isolation
+- ModelScheduler: strategy-based selection (cost/speed/capability/balanced)
+- CircuitBreakerRegistry: 3-state (CLOSED/OPEN/HALF_OPEN) per-provider
+- withRetry(): exponential backoff with jitter, configurable status codes
+## Gateway Layer
 
-### Model Router (`router.ts`)
-- `resolveProvider(model)`: determines which provider to use
-- Priority: model_routing config → fallback_chain → first available
-- Checks quota availability via `isProviderAvailable()`
-- Checks API key availability via env vars or config
+The Gateway (`packages/gateway/`) is a Fastify HTTP server (:3000) with:
 
-### Provider Client (`providers.ts`)
-- `callChatCompletions()`: unified OpenAI-compatible client
-- `callResponsesApi()`: converts Responses API → Chat Completions
-  - Extracts messages from `input` array
-  - Maps `input_text`/`output_text` content types
-  - Preserves tool definitions
+### Model Gateway Routes (`model-gateway/routes.ts`)
+- `GET /v1/models` — model list (dynamic discovery, falls back to static config)
+- `POST /v1/chat/completions` — OpenAI-compatible with streaming
+- `POST /v1/responses` — Codex Desktop Responses API adapter
+- Gateway model-gateway management: health, quota, stats, per-provider health
 
-### Routes (`routes.ts`)
-- `GET /v1/models`: aggregated model list
-- `POST /v1/chat/completions`: proxy with streaming support
-- `POST /v1/responses`: Codex Desktop adapter
-- `GET /model-gateway/health`: quota-aware health check
-- `GET /model-gateway/quota`: full quota details
+### API Routes (`routes/api.ts`)
+- `GET /v1/health` / `GET /v1/health/detailed` — health check + detailed
+- `POST /v1/tasks` / `GET /v1/tasks` / `GET /v1/tasks/:taskId` — task CRUD
+- `POST /v1/tasks/:taskId/cancel` — cancel running task
+- `POST /v1/scheduler` / `GET /v1/scheduler` / `DELETE /v1/scheduler/:id` — cron tasks
+- `POST /v1/pipeline` — multi-agent sequential execution
+- `POST /v1/spaces` / `GET /v1/spaces/:spaceId` — shared context spaces
+- `GET /v1/agents` / `POST /v1/agents` — agent registry
+- `GET /v1/model-orchestrator/models` — bridge to model-orchestrator
+- `POST /v1/model-orchestrator/chat` — bridge to model-orchestrator scheduler
+- `GET /v1/skills` / `POST /v1/skills/:skillId/execute` — bridge to toolkit
+- `GET /dashboard` — web dashboard (dark theme, auto-refresh)
 
-## Agent Orchestration Layer
+### Bridge Pattern
+Gateway bridges to other packages without direct coupling:
+- model-orchestrator: `/v1/model-orchestrator/*` routes use `@agentmesh/model-orchestrator` 
+- toolkit: `/v1/skills` routes use `@agentmesh/toolkit SkillLoader/SkillController`
+- engine: Pipeline routes use Orchestrator from `@agentmesh/engine`
+## Engine Layer
 
-### Agent Registry
-- Manages 25+ agent adapters
-- Capability-based agent discovery
-- Health check monitoring
+The Engine (`packages/engine/`) is Honeycomb Orchestrator providing:
+- Orchestrator + PhaseStateMachine for multi-phase agent workflows
+- DSL Compiler for domain-specific workflow definitions
+- AgentRunner for parallel agent execution
+- MessageBus for inter-agent communication
+- MetricsCollector for performance metrics (exported to MCP)
+- Domain plugin system: visual-production, document-processing, data-science
 
-### Task Router
-- Keyword-based task-to-agent routing
-- Priority-based rule matching
-- Broadcast support for multi-agent tasks
+## Toolkit Layer
 
-### Context Manager
-- Shared spaces with file persistence
-- Message history per space
-- Artifact storage
+The Toolkit (`packages/toolkit/`) is the shared capability SDK:
+- AlgorithmEngine (7-phase) + PatternLoader + 16 Agent Design Patterns
+- SkillLoader/Router/Executor — skill lifecycle management
+- MemoryStore — persistent agent memory
+- ToolRegistry — shared tool registration
+- LLM multi-Provider (OpenAI/Anthropic/Ollama)
+- Middleware pipeline + Observability
+- VectorStore (MemoryVectorStore / ChromaVectorStore / QdrantVectorStore)
+- KnowledgeGraph + DataSources + HybridRetriever
 
+## MCP Server
+
+The MCP Server (`apps/server/src/mcp/`) provides 11 tools:
+- `models_list/chat/health` — model orchestration
+- `tasks_submit/status/list` — task management
+- `skills_list/search/execute` — skill management
+- `system_health/metrics` — system monitoring
 ## Data Flow
 
 ### Chat Completions Flow
 ```
 1. Client → POST /v1/chat/completions { model, messages }
-2. Router: parse model → check routing config → check quota → select provider
-3. Provider Client: POST to provider API with streaming
-4. Response: SSE stream or JSON → Client
+2. Gateway: model-orchestrator scheduler (primary path)
+   a. Circuit breaker check
+   b. withRetry() exponential backoff
+   c. Strategy-based model selection
+3. Fallback: old resolveProvider() if scheduler returns no match
+4. Provider Client: POST to provider API with streaming
+5. Response: SSE stream or JSON → Client
+```
+
+### Model Discovery Flow
+```
+1. Startup: LocalModelDiscoverer.discoverAll()
+2. Probe Ollama API → http://localhost:11434/api/tags
+3. Probe LM Studio API → http://localhost:1234/v1/models
+4. Scan llama.cpp ports → 8080/8081/8082/8000
+5. Cloud providers loaded from models.yaml (API keys)
+6. All results merged, deduplicated → ModelRegistry
 ```
 
 ### Codex Desktop Flow
 ```
-1. Codex Desktop → POST /v1/responses { input: [...], model }
+1. Codex Desktop → POST /v1/responses { input, model }
 2. Adapter: convert input items → messages array
-3. Router: resolve provider (same as chat completions)
-4. Provider Client: POST /v1/chat/completions to provider
-5. Adapter: convert chat response → responses format (output items)
+3. Model-orchestrator scheduler or fallback router
+4. Provider Client: POST /v1/chat/completions
+5. Adapter: convert response → responses format
 6. Response → Codex Desktop
-```
-
-### Quota Refresh Flow
-```
-1. First API call triggers quota probe
-2. codexbar subprocess runs (~10-30s)
-3. Results parsed and cached (60s TTL)
-4. Router uses cached data for decisions
-5. After 60s, next request triggers refresh
 ```
 
 ## Technology Stack
 
-- **Runtime**: Bun (>=1.0.0)
-- **Server**: Fastify 5
+- **Runtime**: Bun (>=1.0.0) / Node.js (>=18.0.0)
+- **Server**: Fastify 5 with Fastify WebSocket
 - **HTTP Client**: Native Fetch API
 - **Streaming**: Server-Sent Events (SSE)
-- **WebSocket**: Fastify WebSocket plugin
-- **Vector Store**: ChromaDB (optional)
+- **Config**: YAML (gateway.yaml + models.yaml)
+- **Vector Store**: ChromaDB / Qdrant / Memory (optional)
+- **MCP**: @modelcontextprotocol/sdk
 - **Logging**: Custom structured logger + Pino
-- **Config**: YAML
 
-## Design Decisions
+## Package Dependencies
 
-1. **All providers via OpenAI-compatible API**: Avoids per-provider client complexity
-2. **Quota caching**: codexbar is slow, 60s cache prevents latency spikes
-3. **Streaming passthrough**: Zero-copy SSE forwarding for efficiency
-4. **No additional deps for model gateway**: Uses Bun's built-in Fetch API
-5. **codexbar as quota source**: Already aggregates 30+ providers, no duplicate logic
+```
+apps/cli → apps/server → packages/gateway → packages/engine → packages/toolkit
+                 ↘              ↙              ↙
+            packages/model-orchestrator
+                 ↕
+           packages/core-types (zero dependency)
+```
+
+Strictly one-directional. toolkit is the pure bottom layer.

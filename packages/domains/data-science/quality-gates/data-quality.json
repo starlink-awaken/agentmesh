@@ -1,0 +1,53 @@
+[
+  {
+    "name": "Data Quality",
+    "phase": "execution",
+    "mandatory": true,
+    "description": "Ensures data meets quality thresholds before analysis and modeling",
+    "criteria": [
+      {
+        "id": "missing-data-threshold",
+        "name": "Missing Data Threshold",
+        "description": "Percentage of missing values does not exceed acceptable limit",
+        "pass_condition": "missing_rate <= 0.05",
+        "mandatory": true
+      },
+      {
+        "id": "outlier-detection",
+        "name": "Outlier Detection",
+        "description": "Outlier analysis completed and documented",
+        "pass_condition": "outliers_assessed == true",
+        "mandatory": false
+      },
+      {
+        "id": "data-type-consistency",
+        "name": "Data Type Consistency",
+        "description": "All features have correct data types without unexpected coercion",
+        "pass_condition": "type_mismatch_count == 0",
+        "mandatory": true
+      }
+    ]
+  },
+  {
+    "name": "Model Validation",
+    "phase": "feedback",
+    "mandatory": true,
+    "description": "Validates model performance and generalization capability",
+    "criteria": [
+      {
+        "id": "cross-validation",
+        "name": "Cross-Validation Score",
+        "description": "Cross-validation score meets minimum performance threshold",
+        "pass_condition": "cv_score >= 0.7",
+        "mandatory": true
+      },
+      {
+        "id": "overfitting-check",
+        "name": "Overfitting Assessment",
+        "description": "Training-test performance gap within acceptable range",
+        "pass_condition": "train_test_gap <= 0.1",
+        "mandatory": true
+      }
+    ]
+  }
+]

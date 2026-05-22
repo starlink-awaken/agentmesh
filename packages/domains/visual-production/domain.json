@@ -1,6 +1,36 @@
 {
   "name": "visual-production",
-  "description": "Visual production domain",
+  "description": "Visual production domain - comics, animation, video production, storyboard design, visual effects, and post-production across all media formats",
   "archetype": "visual-production",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "phase_prompts": {
+    "research": "Research visual style references, target audience demographics, platform specifications.",
+    "decision": "Define visual style guide, choose art direction, establish color palette.",
+    "execution": "Create visual assets following the storyboard and style guide.",
+    "feedback": "Visual quality assessment with diverse perspectives, consistency check.",
+    "delivery": "Final render including color grading, format for distribution platform."
+  },
+  "agent_overrides": {
+    "visual-director": { "enabled": true, "priority": 10 },
+    "storyboard-artist": { "enabled": true, "priority": 10 },
+    "animator": { "enabled": true, "priority": 10 },
+    "designer": { "enabled": true, "priority": 8 }
+  },
+  "defaults": {
+    "complexity": "standard",
+    "token_budget": 350000,
+    "max_concurrent_agents": 8
+  },
+  "templates": {
+    "storyboard": "templates/storyboard.md",
+    "character-sheet": "templates/character-sheet.md"
+  },
+  "quality_gates": [
+    {
+      "name": "Visual Consistency",
+      "phase": "execution",
+      "criteria": ["Art style consistent across all frames"],
+      "mandatory": true
+    }
+  ]
 }

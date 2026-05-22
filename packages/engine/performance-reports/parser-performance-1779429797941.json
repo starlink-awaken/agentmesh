@@ -1,0 +1,94 @@
+{
+  "test": "parser-performance",
+  "timestamp": 1779429797941,
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v24.3.0",
+    "cpuCount": 18,
+    "totalMemory": "43MB",
+    "timestamp": "2026-05-22T06:03:17.941Z"
+  },
+  "results": [
+    {
+      "sample": "simple-agent",
+      "result": {
+        "nodeCount": 7,
+        "timeMs": 0.0010512500000004366,
+        "throughput": 6658.739595716616
+      }
+    },
+    {
+      "sample": "minimal-agent",
+      "result": {
+        "nodeCount": 7,
+        "timeMs": 0.0006649999999899592,
+        "throughput": 7000
+      }
+    },
+    {
+      "sample": "data-processor",
+      "result": {
+        "nodeCount": 38,
+        "timeMs": 0.0011304099999870233,
+        "throughput": 33616.12158458986
+      }
+    },
+    {
+      "sample": "transform-agent",
+      "result": {
+        "nodeCount": 33,
+        "timeMs": 0.0009879199999886623,
+        "throughput": 33000
+      }
+    },
+    {
+      "sample": "conditional-router",
+      "result": {
+        "nodeCount": 46,
+        "timeMs": 0.0063916700000118,
+        "throughput": 7196.8671724158285
+      }
+    },
+    {
+      "sample": "resilient-processor",
+      "result": {
+        "nodeCount": 48,
+        "timeMs": 0.0014341600000079779,
+        "throughput": 33469.069001877746
+      }
+    },
+    {
+      "sample": "enterprise-workflow",
+      "result": {
+        "nodeCount": 106,
+        "timeMs": 0.0019341700000040873,
+        "throughput": 54803.86935986806
+      }
+    },
+    {
+      "sample": "multi-domain-orchestrator",
+      "result": {
+        "nodeCount": 81,
+        "timeMs": 0.0022966699999960836,
+        "throughput": 35268.45389199934
+      }
+    },
+    {
+      "sample": "parallel-processor",
+      "result": {
+        "nodeCount": 41,
+        "timeMs": 0.0011416699999972479,
+        "throughput": 35912.3039057686
+      }
+    },
+    {
+      "sample": "batch-processor",
+      "result": {
+        "nodeCount": 38,
+        "timeMs": 0.0010425000000032015,
+        "throughput": 36450.83932842523
+      }
+    }
+  ]
+}

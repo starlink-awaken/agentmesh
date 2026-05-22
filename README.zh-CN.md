@@ -1,202 +1,141 @@
-# Agent Mesh Gateway
-
-<p align="center">
-  <img src="https://img.shields.io/npm/v/@starlink-awaken/agentmesh" alt="npm version">
-  <img src="https://img.shields.io/npm/l/@starlink-awaken/agentmesh" alt="license">
-  <img src="https://img.shields.io/github/stars/starlink-awaken/agentmesh" alt="stars">
-</p>
-
-> 统一 Agent 调度网关 + 多模型智能路由 — 构建本地 AI 基础设施的核心层
+# Agent Mesh v2.0 — 统一 Agent 调度基础设施
 
 [English](./README.md) | [中文](./README.zh-CN.md)
 
-## 概述
+> 三层统一架构：API 网关 + 编排引擎 + 能力库，本地和云端模型聚合调度。
 
-Agent Mesh Gateway 是一个轻量级的本地 AI 基础设施层，提供两大核心能力：
+## 架构总览
 
-- **Agent 调度层** — 协调 25+ 种 AI Agent（Claude Code, Codex Desktop, Gemini CLI...），进行任务路由与协作
-- **模型网关层** — 统一 OpenAI 兼容 API 端点，根据 codexbar 实时配额数据智能路由到最优 Provider
-
-## 特性
-
-- **多 Agent 支持** — 内置 25+ Agent 适配器
-- **智能模型路由** — 根据配额自动选择 Provider（DeepSeek → OpenRouter → Ollama）
-- **配额感知 Fallback** — 通过 codexbar 实时感知各平台配额，自动降级
-- **Codex Desktop 适配** — 内置 Responses API → Chat Completions 转换
-- **OpenAI 兼容 API** — 标准 `/v1/chat/completions` 和 `/v1/models` 端点
-- **CLI 工具** — 完整的命令行管理接口
-- **Docker 支持** — Dockerfile + docker-compose 一键部署
-- **结构化日志** — 带级别的日志 + 文件持久化
+```
+agentmesh/  (monorepo — bun workspaces)
+├── packages/
+│   ├── core-types/         统一接口契约 (model/agent/task/events)
+│   ├── model-orchestrator/ 本地+云端模型聚合发现与动态调度
+│   ├── gateway/            Fastify HTTP API 网关 (:3000)
+│   ├── engine/             Honeycomb 多 Agent 编排引擎
+│   ├── toolkit/            共享能力 SDK (LLM/Memory/Pattern/Skills)
+│   └── domains/            可插拔领域模板 (visual-production 等)
+├── apps/
+│   ├── server/             MCP 服务器 (11 tools) + 进程管理器
+│   └── cli/                统一命令行
+└── config/
+    ├── gateway.yaml        网关配置
+    └── models.yaml         模型 Provider/断路器/重试 配置
+```
 
 ## 快速开始
 
 ### 安装
 
 ```bash
-npm install -g @starlink-awaken/agentmesh
-# 或
-bun install -g @starlink-awaken/agentmesh
-```
-
-### 初始化
-
-```bash
-agentmesh setup    # 交互式配置 API Key
-agentmesh start    # 启动网关
-agentmesh doctor   # 检查系统状态
-```
-
-### 从源码运行
-
-```bash
 git clone https://github.com/starlink-awaken/agentmesh.git
 cd agentmesh
-cp .env.example .env   # 编辑填入 API Key
-./start.sh             # 一键启动
+bun install
 ```
 
-### Docker
+### 类型检查 + 测试
 
 ```bash
-docker compose up -d   # 启动网关 + ChromaDB
+bun run typecheck   # 7 个包全部验证
+bun test            # 144 个测试全绿
 ```
 
-## 使用方法
-
-### CLI
+### 启动 HTTP 网关
 
 ```bash
-agentmesh start              # 启动服务
-agentmesh connect            # 交互式接入 AI 工具 (自动嗅探)
-agentmesh connect list       # 检测已安装工具
-agentmesh disconnect all     # 恢复工具配置
-agentmesh health             # 健康检查
-agentmesh models             # 列出可用模型
-agentmesh quota              # 配额状态
-agentmesh config show        # 查看配置
-agentmesh doctor             # 系统诊断
-agentmesh help               # 帮助
+cd packages/gateway && bun run src/index.ts
+# 浏览器访问 http://localhost:3000/dashboard
 ```
 
-### API
+### 启动 MCP 服务器
 
 ```bash
-# 健康检查
-curl http://127.0.0.1:3000/health
-
-# 模型列表
-curl http://127.0.0.1:3000/v1/models
-
-# 配额信息
-curl http://127.0.0.1:3000/model-gateway/quota
-
-# Chat Completions
-curl -X POST http://127.0.0.1:3000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "deepseek-chat",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
-
-# Codex Desktop Responses API
-curl -X POST http://127.0.0.1:3000/v1/responses \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "deepseek-v4-pro",
-    "input": [{"role": "user", "content": "Write a function"}]
-  }'
+bun run apps/server/src/mcp/index.ts
+# 仅需终端，无需 HTTP 端口，兼容任何 MCP 客户端
 ```
 
-### 对接 AI 工具
+### CLI 模型操作
 
-**一键接入：**
 ```bash
-agentmesh connect            # 交互式选择工具
-agentmesh connect all        # 接入所有检测到的工具
-agentmesh disconnect all     # 恢复
+bun run apps/cli/src/index.ts model list    # 列出本地+云端所有模型
+bun run apps/cli/src/index.ts model health  # 模型健康检查
+bun run apps/cli/src/index.ts status        # 系统状态
+bun run apps/cli/src/index.ts start         # 启动服务
 ```
 
-**Codex Desktop** (`~/.codex/config.toml`):
-```toml
-model_provider = "agentmesh"
-[model_providers.agentmesh]
-name = "Agent Mesh"
-base_url = "http://127.0.0.1:3000/v1"
-wire_api = "responses"
+## Model Orchestrator
+
+本地和云端模型的统一聚合与动态调度。
+
+### 支持的 Provider
+
+| Provider | 位置 | 发现方式 |
+|----------|------|----------|
+| Ollama | 本地 | `http://localhost:11434/api/tags` |
+| LM Studio | 本地 | `http://localhost:1234/v1/models` |
+| llama.cpp | 本地 | 端口扫描 (8080/8081/8082/8000) |
+| OpenAI | 云端 | API key |
+| Anthropic | 云端 | API key |
+| OpenRouter | 云端 | API key |
+
+### 调度策略
+
+- **cost-first**: 按 token 单价升序
+- **speed-first**: 按平均延迟升序
+- **capability-first**: 按能力匹配度 + contextWindow
+- **balanced**: 加权综合（成本 30% + 速度 30% + 能力 40%）
+
+### 断路器
+
+三态: CLOSED → OPEN (3次失败) → HALF_OPEN → CLOSED/OPEN。通过 `models.yaml` 配置。
+
+### 重试
+
+指数退避 + 随机抖动。默认: 3次重试, 500ms基础延迟, 最大10s。
+
+## 包依赖
+
+```
+apps/cli → apps/server → packages/gateway → packages/engine → packages/toolkit
+                 ↘              ↙              ↙
+            packages/model-orchestrator
+                 ↕
+           packages/core-types (零依赖)
 ```
 
-**Claude Code / 其他工具:**
-统一指向 `http://127.0.0.1:3000/v1`，使用 OpenAI 兼容 API。
+严格单向，toolkit 是纯底层能力层。
 
-## 架构
+## API 端点一览
+
+| 端点 | 层 | 说明 |
+|------|-----|------|
+| `GET /v1/health` | gateway | 健康检查 |
+| `GET /v1/health/detailed` | gateway | 详细健康（断路器、配置） |
+| `GET /v1/models` | model-gateway | 模型列表（动态发现） |
+| `POST /v1/chat/completions` | model-gateway | OpenAI 兼容聊天 |
+| `POST /v1/responses` | model-gateway | Codex Desktop 适配器 |
+| `GET /v1/model-orchestrator/models` | bridge | 模型编排列表 |
+| `POST /v1/model-orchestrator/chat` | bridge | 调度器路由聊天 |
+| `GET /v1/skills` | bridge | 技能列表 |
+| `POST /v1/skills/:id/execute` | bridge | 执行技能 |
+| `GET /v1/tasks` | gateway | 任务列表 |
+| `POST /v1/tasks` | gateway | 提交任务 |
+| `GET /v1/agents` | gateway | Agent 列表 |
+| `POST /v1/pipeline` | gateway | 多 Agent 流水线 |
+| `GET /dashboard` | gateway | 网页仪表盘 |
+
+## 项目状态
 
 ```
-  Codex Desktop   Claude Code   Gemini CLI   Other Tools
-        │               │             │            │
-        └───────────────┼─────────────┼────────────┘
-                        │   /v1/*     │
-                        ▼             ▼
-              ┌─────────────────────────┐
-              │   Agent Mesh Gateway    │
-              │                         │
-              │  ┌───────────────────┐  │
-              │  │  Model Router     │  │  ← codexbar 配额感知
-              │  │  Provider Select  │  │
-              │  └───────────────────┘  │
-              │                         │
-              │  ┌───────────────────┐  │
-              │  │  Agent Router     │  │  ← 任务关键词匹配
-              │  │  Task Dispatcher  │  │
-              │  └───────────────────┘  │
-              └─────────┬───────────────┘
-                        │
-         ┌──────────────┼──────────────┐
-         ▼              ▼              ▼
-     DeepSeek      OpenRouter       Ollama
+AgentMesh v2:    7 包 monorepo | 144 测试 | 113K 源码行 | 0 编译错误
+├── core-types:         5 文件 | 零依赖类型包
+├── model-orchestrator: 12 文件 | 6 Provider | 动态调度器 | 断路器 | 重试
+├── gateway:            37 文件 | 9 测试 | Fastify HTTP GW | 45+ 路由
+├── engine:             93 文件 | 92 测试 | Honeycomb 编排
+├── toolkit:            156 文件 | 41 测试 | 能力 SDK
+├── server:             2 文件 | MCP (11 tools)
+└── cli:                1 文件 | 统一 CLI
 ```
-
-## 配置
-
-配置文件: `config/gateway.yaml`
-
-```yaml
-models:
-  providers:
-    deepseek:
-      base_url: https://api.deepseek.com/v1
-      api_key_env: DEEPSEEK_API_KEY
-      models: [deepseek-chat, deepseek-v4-pro]
-    # ... 更多 Provider
-
-  fallback_chain: [deepseek, openrouter, ollama]
-
-  model_routing:
-    "gpt-": [openai, deepseek]
-    "deepseek": [deepseek]
-    "claude": [openrouter]
-```
-
-## 支持的 Provider
-
-| Provider | 类型 | 需要 |
-|----------|------|------|
-| DeepSeek | API Key | `DEEPSEEK_API_KEY` |
-| OpenAI | API Key | `OPENAI_API_KEY` |
-| OpenRouter | API Key | `OPENROUTER_API_KEY` |
-| Ollama | 本地 | 安装 [Ollama](https://ollama.ai) |
-
-## API 端点
-
-| 端点 | 说明 |
-|------|------|
-| `GET /health` | 健康检查 |
-| `GET /v1/models` | 模型列表 |
-| `POST /v1/chat/completions` | Chat Completions |
-| `POST /v1/responses` | Codex Desktop Responses |
-| `GET /model-gateway/health` | 网关健康 + 配额 |
-| `GET /model-gateway/quota` | 配额详情 |
-| `GET /agents` | Agent 列表 |
-| `POST /tasks` | 提交 Agent 任务 |
 
 ## 文档
 
@@ -204,10 +143,6 @@ models:
 - [API 文档](./docs/api.md)
 - [配置参考](./docs/configuration.md)
 
-## 贡献
-
-欢迎贡献！详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
-
 ## 许可证
 
-MIT — [LICENSE](./LICENSE)
+MIT

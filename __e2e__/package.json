@@ -1,0 +1,11 @@
+{
+  "name": "@agentmesh/e2e",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "fastify": "^5.7.4",
+    "yaml": "^2.9.0",
+    "uuid": "^13.0.0"
+  }
+}

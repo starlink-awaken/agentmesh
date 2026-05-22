@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Code Quality",
+    "phase": "execution",
+    "mandatory": true,
+    "description": "Ensures code meets quality standards before merging",
+    "criteria": [
+      {
+        "id": "coverage-check",
+        "name": "Code Coverage",
+        "description": "Code coverage meets minimum threshold",
+        "pass_condition": "coverage >= 80",
+        "mandatory": true
+      },
+      {
+        "id": "test-pass",
+        "name": "All Tests Pass",
+        "description": "All unit, integration, and e2e tests pass without failure",
+        "pass_condition": "test_failures == 0",
+        "mandatory": true
+      },
+      {
+        "id": "lint-clean",
+        "name": "Lint Clean",
+        "description": "No linting errors or warnings",
+        "pass_condition": "lint_errors == 0",
+        "mandatory": true
+      }
+    ]
+  },
+  {
+    "name": "Security Review",
+    "phase": "feedback",
+    "mandatory": false,
+    "description": "Scans for common security vulnerabilities and dependency issues",
+    "criteria": [
+      {
+        "id": "vulnerability-scan",
+        "name": "Vulnerability Scan",
+        "description": "No critical or high-severity vulnerabilities",
+        "pass_condition": "critical_vulns == 0 && high_vulns == 0",
+        "mandatory": true
+      }
+    ]
+  }
+]

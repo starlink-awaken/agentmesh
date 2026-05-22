@@ -1,8 +1,29 @@
 {
   "name": "Software Development",
-  "description": "Software development domain with CI/CD and code review",
+  "description": "Software development domain with CI/CD and code review covering full-stack development, testing, deployment, and maintenance.",
   "archetype": "software-dev",
   "version": "1.0.0",
+  "phase_prompts": {
+    "research": "Research technical requirements, existing solutions, libraries, and architecture patterns.",
+    "decision": "Define technical architecture, choose tech stack, establish coding standards.",
+    "execution": "Implement features following coding standards and architecture decisions.",
+    "feedback": "Code review, performance analysis, security audit, test coverage verification.",
+    "delivery": "Build, tag, and deploy to target environment with release notes."
+  },
+  "agent_overrides": {
+    "developer": { "enabled": true, "priority": 10 },
+    "qa-engineer": { "enabled": true, "priority": 9 },
+    "architect": { "enabled": true, "priority": 10 }
+  },
+  "defaults": {
+    "complexity": "standard",
+    "token_budget": 100000,
+    "max_concurrent_agents": 3
+  },
+  "templates": {
+    "feature-spec": "templates/feature-spec.md",
+    "code-review": "templates/code-review.md"
+  },
   "quality_gates": [
     {
       "name": "Code Quality",
@@ -23,10 +44,5 @@
         }
       ]
     }
-  ],
-  "defaults": {
-    "complexity": "standard",
-    "token_budget": 100000,
-    "max_concurrent_agents": 3
-  }
+  ]
 }

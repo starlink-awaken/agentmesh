@@ -1,6 +1,34 @@
 {
   "name": "data-science",
-  "description": "Data science domain",
+  "description": "Data science domain - data analysis, machine learning, statistical modeling, data visualization, predictive analytics.",
   "archetype": "data-science",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "phase_prompts": {
+    "research": "Research data sources, quality issues, statistical requirements.",
+    "decision": "Define analytical approach, select models and methods.",
+    "execution": "Collect and clean data, implement models, run analyses.",
+    "feedback": "Statistical validation review, methodology assessment.",
+    "delivery": "Final analysis report, interactive dashboards, model documentation."
+  },
+  "agent_overrides": {
+    "data-analyst": { "enabled": true, "priority": 10 },
+    "ml-engineer": { "enabled": true, "priority": 10 }
+  },
+  "defaults": {
+    "complexity": "standard",
+    "token_budget": 400000,
+    "max_concurrent_agents": 6
+  },
+  "templates": {
+    "analysis-report": "templates/analysis-report.md",
+    "model-card": "templates/model-card.md"
+  },
+  "quality_gates": [
+    {
+      "name": "Data Quality",
+      "phase": "execution",
+      "criteria": ["Missing data within acceptable thresholds"],
+      "mandatory": true
+    }
+  ]
 }

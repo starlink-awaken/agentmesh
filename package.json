@@ -6,7 +6,8 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/*",
+    "__e2e__"
   ],
   "scripts": {
     "build": "npm -ws run build",

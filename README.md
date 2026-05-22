@@ -1,104 +1,147 @@
-# Agent Mesh v2.0 — 统一 Agent 调度基础设施
+# Agent Mesh v2.0 — Unified Agent Scheduling Infrastructure
 
 [English](./README.md) | [中文](./README.zh-CN.md)
 
-> 三层统一架构：API 网关 + 编排引擎 + 能力库，本地和云端模型聚合调度。
+> Three-layer unified architecture: API Gateway + Orchestration Engine + Capability SDK, with local and cloud model aggregation and dynamic scheduling.
 
-## 架构总览
+## Architecture Overview
 
 ```
 agentmesh/  (monorepo — bun workspaces)
 ├── packages/
-│   ├── core-types/         统一接口契约 (model/agent/task/events)
-│   ├── model-orchestrator/ 本地+云端模型聚合发现与动态调度
-│   ├── gateway/            Fastify HTTP API 网关
-│   ├── engine/             Honeycomb 多 Agent 编排引擎
-│   └── toolkit/            共享能力 SDK (LLM/Memory/Pattern/Skills)
+│   ├── core-types/         Unified interface contracts (model/agent/task/events)
+│   ├── model-orchestrator/ Local + cloud model aggregation discovery + dynamic scheduling
+│   ├── gateway/            Fastify HTTP API Gateway (:3000)
+│   ├── engine/             Honeycomb Multi-Agent Orchestration Engine
+│   ├── toolkit/            Shared Capability SDK (LLM/Memory/Pattern/Skills)
+│   └── domains/            Pluggable domain templates (visual-production, etc.)
 ├── apps/
-│   ├── server/             MCP 服务器 + 进程管理器
-│   └── cli/                统一命令行
+│   ├── server/             MCP Server (11 tools) + Process Manager
+│   └── cli/                Unified CLI
 └── config/
-    └── gateway.yaml        网关配置
+    ├── gateway.yaml        Gateway configuration
+    └── models.yaml         Model provider, circuit breaker, and retry config
 ```
 
-## 快速开始
+## Quick Start
 
 ```bash
-# 克隆项目
 git clone https://github.com/starlink-awaken/agentmesh.git
 cd agentmesh
 
-# 安装依赖
+# Install dependencies
 bun install
 
-# 类型检查（7 个包全部验证）
+# Type check (all 7 packages)
 bun run typecheck
 
-# 测试
+# Run all 144 tests
 bun test
 ```
 
-### 发现本地模型
+### Gateway
+
+```bash
+cd packages/gateway && bun run src/index.ts
+# HTTP API at http://localhost:3000
+```
+
+### MCP Server
+
+```bash
+bun run apps/server/src/mcp/index.ts
+# MCP over stdio, compatible with any MCP client
+```
+
+### CLI
 
 ```bash
 bun run apps/cli/src/index.ts model list
 bun run apps/cli/src/index.ts model health
-```
-
-### 启动 MCP 服务器
-
-```bash
-bun run apps/server/src/mcp/index.ts
-```
-
-### 启动 HTTP 网关
-
-```bash
-cd packages/gateway && bun run src/index.ts
+bun run apps/cli/src/index.ts start
+bun run apps/cli/src/index.ts status
 ```
 
 ## Model Orchestrator
 
-本地和云端模型的统一聚合与动态调度。
+Unified aggregation and dynamic scheduling for local + cloud models.
 
-### 支持的 Provider
+### Supported Providers
 
-| Provider | 位置 | 发现方式 |
-|----------|------|----------|
-| Ollama | 本地 | `http://localhost:11434/api/tags` |
-| LM Studio | 本地 | `http://localhost:1234/v1/models` |
-| llama.cpp | 本地 | 端口扫描 (8080/8081/8082/8000) |
-| OpenAI | 云端 | API |
-| Anthropic | 云端 | API |
-| OpenRouter | 云端 | API |
+| Provider | Location | Discovery |
+|----------|----------|-----------|
+| Ollama | Local | `http://localhost:11434/api/tags` |
+| LM Studio | Local | `http://localhost:1234/v1/models` |
+| llama.cpp | Local | Port scan (8080/8081/8082/8000) |
+| OpenAI | Cloud | API key |
+| Anthropic | Cloud | API key |
+| OpenRouter | Cloud | API key |
 
-### 调度策略
+### Scheduling Strategies
 
-- **cost-first**: 按 token 单价升序
-- **speed-first**: 按平均延迟升序
-- **capability-first**: 按能力匹配度 + contextWindow
-- **balanced**: 加权综合（成本 30% + 速度 30% + 能力 40%）
+- **cost-first**: Ascending by token unit price
+- **speed-first**: Ascending by average latency
+- **capability-first**: Capability match + contextWindow score
+- **balanced**: Weighted composite (cost 30% + speed 30% + capability 40%)
 
-## 包依赖
+### Circuit Breaker
+
+3-state: CLOSED → OPEN (3 failures) → HALF_OPEN → CLOSED/OPEN. Configured in `models.yaml`.
+
+### Retry
+
+Exponential backoff with jitter. Default: 3 retries, 500ms base delay, max 10s.
+
+## Package Dependency
 
 ```
 apps/cli → apps/server → packages/gateway → packages/engine → packages/toolkit
                  ↘              ↙              ↙
             packages/model-orchestrator
                  ↕
-           packages/core-types (零依赖)
+           packages/core-types (zero-dependency)
 ```
 
-## 测试
+Strictly one-directional. toolkit is the pure bottom layer.
 
-| 包 | 测试数 |
-|----|--------|
-| engine | 92 |
-| toolkit | 41 |
-| gateway | 9 |
-| model-orchestrator | 2 |
-| **总计** | **144** |
+## API Endpoints
 
-## 许可证
+| Endpoint | Layer | Description |
+|----------|-------|-------------|
+| `GET /v1/health` | gateway | Health check |
+| `GET /v1/health/detailed` | gateway | Detailed health (circuits, config) |
+| `GET /v1/models` | model-gateway | Model list (dynamic discovery) |
+| `POST /v1/chat/completions` | model-gateway | OpenAI-compatible chat |
+| `POST /v1/responses` | model-gateway | Codex Desktop adapter |
+| `GET /v1/model-orchestrator/models` | bridge | Model-orchestrator listing |
+| `POST /v1/model-orchestrator/chat` | bridge | Scheduler-routed chat |
+| `GET /v1/skills` | bridge | Skill list |
+| `POST /v1/skills/:id/execute` | bridge | Execute skill |
+| `GET /v1/tasks` | gateway | Task list |
+| `POST /v1/tasks` | gateway | Submit task |
+| `GET /v1/agents` | gateway | Agent list |
+| `POST /v1/pipeline` | gateway | Multi-agent pipeline |
+| `GET /dashboard` | gateway | Web dashboard |
+
+## Project Status
+
+```
+AgentMesh v2:    7 packages monorepo | 144 tests | 113K source lines | 0 compile errors
+├── core-types:         5 files | zero-dependency type package
+├── model-orchestrator: 12 files | 6 Providers | dynamic scheduler | circuit breaker | retry
+├── gateway:            37 files | 9 tests | Fastify HTTP gateway | 45+ routes
+├── engine:             93 files | 92 tests | Honeycomb orchestration
+├── toolkit:            156 files | 41 tests | Capability SDK
+├── server:             2 files | MCP (11 tools)
+└── cli:                1 file | Unified CLI
+```
+
+## Documentation
+
+- [Architecture](./docs/architecture.md)
+- [API Reference](./docs/api.md)
+- [Configuration Guide](./docs/configuration.md)
+
+## License
 
 MIT
