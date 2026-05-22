@@ -10,10 +10,15 @@
   ],
   "scripts": {
     "build": "npm -ws run build",
+    "build:order": "cd packages/core-types && bun run build && cd ../toolkit && bun run build && cd ../model-orchestrator && bun run build && cd ../gateway && bun run build",
+    "start": "bun run apps/server/src/launcher.ts",
     "test": "npm -ws run test",
     "typecheck": "npm -ws run typecheck",
     "lint": "npm -ws run typecheck",
-    "clean": "npm -ws run clean"
+    "clean": "npm -ws run clean",
+    "mcp": "bun run apps/server/src/mcp/index.ts",
+    "gateway": "bun run packages/gateway/src/index.ts",
+    "cli": "bun run apps/cli/src/index.ts"
   },
   "devDependencies": {
     "typescript": "^5"
