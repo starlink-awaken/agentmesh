@@ -70,7 +70,7 @@ function defaults(): ModelsConfig {
 }
 
 export function getEnv(key: string): string {
-  return Bun.env[key] || '';
+  return process.env[key] || '';
 }
 
 // ── 配置 → 初始化 ──

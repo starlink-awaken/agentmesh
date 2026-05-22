@@ -6,10 +6,9 @@
 import type { ModelDescriptor, ModelRoutePolicy } from '@agentmesh/core-types';
 import type { ModelRequest, LoadInfo } from './types.js';
 
-/** 策略评分函数签名 */
 type ScoreFn = (model: ModelDescriptor, request: ModelRequest) => number;
 
-/** 策略注册表 */
+const REFERENCE_CTX = 128_000;
 const registry = new Map<string, ScoreFn>();
 
 function register(name: string, fn: ScoreFn): void {
@@ -17,10 +16,10 @@ function register(name: string, fn: ScoreFn): void {
 }
 
 function get(name: string): ScoreFn {
-  return registry.get(name) || registry.get('balanced')!;
+  const fn = registry.get(name);
+  if (!fn) throw new Error(`Unknown scheduling policy: "${name}"`);
+  return fn;
 }
-
-// ── 内置策略 ──
 
 register('cost-first', (model, _req) => {
   if (!model.costPer1KTokens) return 1;
@@ -35,7 +34,7 @@ register('speed-first', (model, _req) => {
 register('capability-first', (model, request) => {
   const capScore = request.requiredCapabilities.filter(c => model.capabilities.includes(c as any)).length
     / Math.max(1, request.requiredCapabilities.length);
-  const ctxScore = Math.min(1, model.contextWindow / 128000);
+  const ctxScore = Math.min(1, model.contextWindow / REFERENCE_CTX);
   return capScore * 0.6 + ctxScore * 0.4;
 });
 
@@ -51,15 +50,12 @@ register('balanced', (model, request) => {
   return costScore * 0.3 + speedScore * 0.3 + capScore * 0.4;
 });
 
-// ── 导出 API ──
-
 export interface ScoredModel {
   model: ModelDescriptor;
   score: number;
   loadPenalty: number;
 }
 
-/** 对所有候选模型评分，返回排序结果 */
 export function scoreModels(
   models: ModelDescriptor[],
   request: ModelRequest,
@@ -76,7 +72,6 @@ export function scoreModels(
     .sort((a, b) => (b.score - b.loadPenalty) - (a.score - a.loadPenalty));
 }
 
-/** 负载惩罚 */
 function getLoadPenalty(modelId: string, loadMap: Map<string, LoadInfo>, ttlMs = 300_000): number {
   const load = loadMap.get(modelId);
   if (!load) return 0;
@@ -87,12 +82,10 @@ function getLoadPenalty(modelId: string, loadMap: Map<string, LoadInfo>, ttlMs =
   return Math.min(0.5, load.activeRequests * 0.1);
 }
 
-/** 注册自定义策略 */
 export function registerPolicy(name: string, fn: ScoreFn): void {
   register(name, fn);
 }
 
-/** 列出所有策略名 */
 export function listPolicies(): string[] {
   return Array.from(registry.keys());
 }

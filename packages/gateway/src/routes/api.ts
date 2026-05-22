@@ -7,6 +7,15 @@ import { contextManager } from '../core/context-manager.js';
 import { vectorStore } from '../core/vector-store.js';
 import { circuitBreakerRegistry } from '../model-gateway/circuit-breaker.js';
 import { getGateway } from '../core/gateway.js';
+import { initFromConfig } from '@agentmesh/model-orchestrator';
+import { SkillLoader, SkillController } from '@agentmesh/toolkit';
+
+// 启动时缓存编排实例（避免每次请求都重复初始化）
+let _modelOrch: ReturnType<typeof initFromConfig> | null = null;
+function getModelOrch() {
+  if (!_modelOrch) { _modelOrch = initFromConfig(); }
+  return _modelOrch;
+}
 
 export async function apiRoutes(fastify: FastifyInstance) {
   // 健康检查
@@ -230,54 +239,55 @@ export async function apiRoutes(fastify: FastifyInstance) {
 
   // ── 模型编排路由 ──
   fastify.get('/model-orchestrator/models', async (_req: FastifyRequest, reply: FastifyReply) => {
-    const { initFromConfig } = await import('@agentmesh/model-orchestrator');
     try {
-      const { registry } = initFromConfig();
+      const { registry } = getModelOrch();
       await registry.refresh();
       reply.send({ total: registry.getAll().length, models: registry.getAll() });
-    } catch (err: any) {
-      reply.code(502).send({ error: { code: 'MODEL_ORCH_FAILED', message: err.message } });
+    } catch (err) {
+      reply.code(502).send({ error: { code: 'MODEL_ORCH_FAILED', message: String(err) } });
     }
   });
 
   fastify.post('/model-orchestrator/chat', async (request: FastifyRequest, reply: FastifyReply) => {
-    const { initFromConfig } = await import('@agentmesh/model-orchestrator');
     try {
-      const { registry, scheduler } = initFromConfig();
+      const { registry, scheduler } = getModelOrch();
       await registry.refresh();
       const { model, messages } = (request.body || {}) as any;
       if (!messages?.length) return reply.code(400).send({ error: { code: 'MISSING_MESSAGES' } });
-      const selection: { model: NonNullable<ReturnType<typeof registry.get>>; providerName: string } | null = model
-        ? (() => { const m = registry.get(model) || registry.getAll()[0]; return m ? { model: m, providerName: '' } : null; })()
-        : await scheduler.selectModel({ task: messages[0]?.content || '', requiredCapabilities: ['chat'] });
+      let selection: { model: NonNullable<ReturnType<typeof registry.get>>; providerName: string } | null;
+      if (model) {
+        const m = registry.get(model) || registry.getAll()[0];
+        if (!m) return reply.code(503).send({ error: { code: 'NO_MODEL_AVAILABLE' } });
+        selection = { model: m, providerName: '' };
+      } else {
+        selection = await scheduler.selectModel({ task: messages[0]?.content || '', requiredCapabilities: ['chat'] });
+      }
       if (!selection) return reply.code(503).send({ error: { code: 'NO_MODEL_AVAILABLE' } });
       const result = await registry.chat(selection.model.id, messages);
       reply.send({ model: selection.model.id, content: result?.content });
-    } catch (err: any) {
-      reply.code(502).send({ error: { code: 'CHAT_FAILED', message: err.message } });
+    } catch (err) {
+      reply.code(502).send({ error: { code: 'CHAT_FAILED', message: String(err) } });
     }
   });
 
   // ── 技能路由 ──
   fastify.get('/skills', async (_req: FastifyRequest, reply: FastifyReply) => {
-    const { SkillLoader } = await import('@agentmesh/toolkit');
     try {
       const loader = new SkillLoader();
       reply.send({ total: loader.getAll().length, skills: loader.getAll() });
-    } catch (err: any) {
-      reply.code(502).send({ error: { code: 'SKILLS_FAILED', message: err.message } });
+    } catch (err) {
+      reply.code(502).send({ error: { code: 'SKILLS_FAILED', message: String(err) } });
     }
   });
 
   fastify.post('/skills/:skillId/execute', async (request: FastifyRequest, reply: FastifyReply) => {
     const { skillId } = request.params as { skillId: string };
-    const { SkillController } = await import('@agentmesh/toolkit');
     try {
       const controller = new SkillController({});
-      const result = await (controller as any).execute(skillId, request.body || {});
+      const result = await (controller as any).execute({ task: skillId, input: JSON.stringify(request.body || {}), sessionId: '' });
       reply.send({ skillId, result });
-    } catch (err: any) {
-      reply.code(502).send({ error: { code: 'SKILL_EXEC_FAILED', message: err.message } });
+    } catch (err) {
+      reply.code(502).send({ error: { code: 'SKILL_EXEC_FAILED', message: String(err) } });
     }
   });
 }
