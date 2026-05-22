@@ -9,6 +9,7 @@ import { loadConfig } from './core/config.js';
 import { circuitBreakerRegistry } from './model-gateway/circuit-breaker.js';
 import { configureRetry } from './model-gateway/retry.js';
 import { initRateLimiter } from './model-gateway/rate-limit.js';
+import { loadModelsConfig } from '@agentmesh/model-orchestrator';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -50,6 +51,20 @@ async function main() {
   await fastify.register(modelGatewayRoutes);
   const { hermesRoutes } = await import('./hermes/routes.js');
   await fastify.register(hermesRoutes, { prefix: '/v1' });
+
+  // 从 models.yaml 读取 Provider 配置（覆盖 gateway.yaml 的 models 字段）
+  const modelsCfg = loadModelsConfig();
+  if (modelsCfg) {
+    const cloudProviders: Record<string, { api_key_env?: string; base_url?: string }> = {};
+    for (const [name, cfg] of Object.entries(modelsCfg.cloud || {})) {
+      if ((cfg as any)?.enabled) {
+        cloudProviders[name] = { api_key_env: (cfg as any)?.api_key_env, base_url: (cfg as any)?.base_url };
+      }
+    }
+    // 合并到 config.models.providers
+    if (!config.models) config.models = { providers: {}, fallback_chain: [], model_routing: {}, defaults: {} };
+    Object.assign(config.models.providers, cloudProviders);
+  }
 
   // 初始化模型网关
   const modelsConfig = config.models;
@@ -157,5 +172,6 @@ main();
  */
 
 // Re-exports for MCP server integration
-export type { TaskManager } from './core/task-manager.js';
+export { TaskManager } from './core/task-manager.js';
+export type { AgentMessage } from './types/index.js';
 

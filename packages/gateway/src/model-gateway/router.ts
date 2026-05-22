@@ -48,7 +48,7 @@ export function resolveProvider(model: string): ResolvedProvider | null {
   if (!config) return null;
 
   // 1. 按 model_routing 配置查找
-  const routingEntries = Object.entries(config.model_routing);
+  const routingEntries = Object.entries(config.model_routing || {});
   for (const [pattern, providers] of routingEntries as [string, string[]][]) {
     if (model.startsWith(pattern)) {
       for (const providerName of providers) {
@@ -78,7 +78,7 @@ export function resolveProvider(model: string): ResolvedProvider | null {
   }
 
   // 2. 全局 fallback 链
-  for (const providerName of config.fallback_chain) {
+  for (const providerName of config.fallback_chain || []) {
     const providerCfg = config.providers[providerName];
     if (!providerCfg) continue;
 

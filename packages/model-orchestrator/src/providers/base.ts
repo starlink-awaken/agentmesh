@@ -91,3 +91,24 @@ export function parseOllamaResponse(body: any, model: string): ChatResult {
     finishReason: body.done ? 'stop' : 'unknown',
   };
 }
+
+/**
+ * 创建缓冲流读取器，将 ReadableStream 按行切分。
+ * 消除各 Provider stream() 中重复的 getReader/TextDecoder/buffer 样板代码。
+ */
+export async function* createBufferReader(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): AsyncIterable<string> {
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      yield line;
+    }
+  }
+}

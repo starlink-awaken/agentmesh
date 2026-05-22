@@ -1,15 +1,23 @@
 import type { ModelDescriptor } from '@agentmesh/core-types';
 import type { ModelProvider } from './providers/base.js';
 import type { ChatOptions, ChatResult, StreamChunk } from './types.js';
+import { CircuitBreakerRegistry } from './circuit-breaker.js';
+import { withRetry } from './retry.js';
+import type { RetryConfig } from './retry.js';
 
 /**
  * ModelRegistry — 模型注册表
  *
  * 管理所有已发现的模型及其 Provider。
+ * 集成了断路器，在 Provider 连续失败时自动隔离。
  */
 export class ModelRegistry {
   private providers = new Map<string, ModelProvider>();
   private models = new Map<string, { descriptor: ModelDescriptor; providerName: string }>();
+  /** 断路器，按 provider name 隔离 */
+  circuitBreaker = new CircuitBreakerRegistry();
+  /** 重试配置（undefined 表示不重试） */
+  retryConfig?: Partial<RetryConfig>;
 
   /** 注册一个 Provider */
   register(provider: ModelProvider): void {
@@ -58,14 +66,35 @@ export class ModelRegistry {
     return this.models.get(modelId)?.descriptor;
   }
 
-  /** 调用模型（自动 release 负载计数） */
-  async chat(modelId: string, messages: unknown[], options?: ChatOptions): Promise<ChatResult | null> {
+  /**
+   * 断路器检查 + 成功/失败记录 + 负载释放（聊和流式共用的底层包装）
+   */
+  private _getProviderFor(modelId: string): { provider: ModelProvider; providerName: string } | null {
     const entry = this.models.get(modelId);
     if (!entry) return null;
     const provider = this.providers.get(entry.providerName);
     if (!provider) return null;
+    const providerName = entry.providerName;
+    if (!this.circuitBreaker.canRequest(providerName)) {
+      throw new Error(`Circuit breaker open for provider ${providerName}`);
+    }
+    return { provider, providerName };
+  }
+
+  /** 调用模型（自动 release 负载计数 + 断路器 + 重试） */
+  async chat(modelId: string, messages: unknown[], options?: ChatOptions): Promise<ChatResult | null> {
+    const p = this._getProviderFor(modelId);
+    if (!p) return null;
     try {
-      return await provider.chat(modelId, messages, options);
+      const doChat = () => p.provider.chat(modelId, messages, options);
+      const result = this.retryConfig
+        ? await withRetry(doChat, undefined, this.retryConfig)
+        : await doChat();
+      this.circuitBreaker.recordSuccess(p.providerName);
+      return result;
+    } catch (err) {
+      this.circuitBreaker.recordFailure(p.providerName);
+      throw err;
     } finally {
       this.schedulerRef?.releaseLoad(modelId);
     }
@@ -76,15 +105,21 @@ export class ModelRegistry {
    * 如果 Provider 支持 stream()，则委托给它；否则回退到 chat() 包装为单块流。
    */
   async *chatStream(modelId: string, messages: unknown[], options?: ChatOptions): AsyncIterable<StreamChunk> {
-    const entry = this.models.get(modelId);
-    if (!entry) throw new Error(`Model ${modelId} not found`);
-    const provider = this.providers.get(entry.providerName);
-    if (!provider) throw new Error(`Provider ${entry.providerName} not found`);
-    if (provider.stream) {
-      yield* provider.stream(modelId, messages, options);
-    } else {
-      const result = await provider.chat(modelId, messages, options);
-      yield { id: result.id, model: result.model, content: result.content, finishReason: result.finishReason };
+    const p = this._getProviderFor(modelId);
+    if (!p) throw new Error(`Model ${modelId} not found or provider unavailable`);
+    try {
+      if (p.provider.stream) {
+        yield* p.provider.stream(modelId, messages, options);
+      } else {
+        const result = await p.provider.chat(modelId, messages, options);
+        yield { id: result.id, model: result.model, content: result.content, finishReason: result.finishReason };
+      }
+      this.circuitBreaker.recordSuccess(p.providerName);
+    } catch (err) {
+      this.circuitBreaker.recordFailure(p.providerName);
+      throw err;
+    } finally {
+      this.schedulerRef?.releaseLoad(modelId);
     }
   }
 

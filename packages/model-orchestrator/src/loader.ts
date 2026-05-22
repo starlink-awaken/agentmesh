@@ -30,6 +30,19 @@ export interface ModelsConfig {
     cost_per_1k_input?: number;
     cost_per_1k_output?: number;
   }[];
+  circuit_breaker?: {
+    enabled?: boolean;
+    failure_threshold?: number;
+    reset_timeout_ms?: number;
+    half_open_max_requests?: number;
+  };
+  retry?: {
+    enabled?: boolean;
+    max_retries?: number;
+    base_delay_ms?: number;
+    max_delay_ms?: number;
+    retryable_statuses?: number[];
+  };
   scheduler?: Partial<SchedulerConfig>;
 }
 
@@ -162,6 +175,32 @@ export function initFromConfig(configPath?: string): InitResult {
       }
       return models;
     };
+  }
+
+  // 配置断路器
+  const cbRaw = config.circuit_breaker as any;
+  if (cbRaw?.enabled !== false) {
+    const cbConfig: Partial<import('./circuit-breaker.js').CircuitBreakerConfig> = {};
+    if (cbRaw?.failure_threshold !== undefined) cbConfig.failureThreshold = cbRaw.failure_threshold;
+    if (cbRaw?.reset_timeout_ms !== undefined) cbConfig.resetTimeoutMs = cbRaw.reset_timeout_ms;
+    if (cbRaw?.half_open_max_requests !== undefined) cbConfig.halfOpenMaxRequests = cbRaw.half_open_max_requests;
+    const allProviders = registry.getProviders();
+    for (const provider of allProviders) {
+      registry.circuitBreaker.configure(provider.name, cbConfig);
+    }
+    console.log(`[ModelCfg] Circuit breaker configured for ${allProviders.length} providers`);
+  }
+
+  // 配置重试
+  const retryRaw = config.retry as any;
+  if (retryRaw?.enabled !== false) {
+    const retryConfig: Partial<import('./retry.js').RetryConfig> = {};
+    if (retryRaw?.max_retries !== undefined) retryConfig.maxRetries = retryRaw.max_retries;
+    if (retryRaw?.base_delay_ms !== undefined) retryConfig.baseDelayMs = retryRaw.base_delay_ms;
+    if (retryRaw?.max_delay_ms !== undefined) retryConfig.maxDelayMs = retryRaw.max_delay_ms;
+    if (retryRaw?.retryable_statuses !== undefined) retryConfig.retryableStatuses = retryRaw.retryable_statuses;
+    registry.retryConfig = retryConfig;
+    console.log(`[ModelCfg] Retry configured: ${JSON.stringify(retryConfig)}`);
   }
 
   return { registry, scheduler, config };

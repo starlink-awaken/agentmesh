@@ -42,11 +42,12 @@ describe('model gateway routes', () => {
     const body = JSON.parse(resp.body);
     expect(body.object).toBe('list');
     expect(Array.isArray(body.data)).toBe(true);
-    expect(body.data.length).toBeGreaterThanOrEqual(2);
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
 
+    // 现在返回的是 model-orchestrator 真实发现的模型
+    // （测试环境通过 initModelRouter 注册的静态配置作为回退）
     const modelIds = body.data.map((m: any) => m.id);
-    expect(modelIds).toContain('deepseek-chat');
-    expect(modelIds).toContain('qwen3:14b');
+    expect(modelIds.some((id: string) => id.includes('ollama/') || id.includes('deepseek') || id.includes('qwen'))).toBe(true);
   });
 
   // 这些端点依赖 codexbar（外部进程，15s+），单元测试 skip，集成测试单独运行

@@ -9,6 +9,7 @@ import { circuitBreakerRegistry } from '../model-gateway/circuit-breaker.js';
 import { getGateway } from '../core/gateway.js';
 import { initFromConfig } from '@agentmesh/model-orchestrator';
 import { SkillLoader, SkillController } from '@agentmesh/toolkit';
+import type { SkillExecutionContext } from '@agentmesh/toolkit';
 import { HoneycombOrchestrator } from '@agentmesh/engine';
 import type { ProjectConfig } from '@agentmesh/engine';
 
@@ -31,9 +32,15 @@ function getEngineOrch(): HoneycombOrchestrator {
 }
 
 /**
- * 将 Gateway 任务转发到 Engine Orchestrator 创建项目。
+ * 将 Gateway 任务转发到 Engine Orchestrator 创建项目并启动编排。
  * 非阻塞：失败仅记录日志，不影响 Gateway 主流程。
+ * 创建的项目 ID 可通过 /v1/engine/projects 查询。
  */
+/** Engine 项目映射（上限 100 条，1 小时后自动清理） */
+const engineProjects = new Map<string, { taskId: string; projectName: string; status: string; createdAt: number }>();
+const ENGINE_PROJECTS_MAX = 100;
+const ENGINE_PROJECTS_TTL = 3600_000;
+
 async function forwardToEngineOrchestrator(
   task: { id: string; request: AgentMessage },
   body: Partial<AgentMessage>,
@@ -51,8 +58,36 @@ async function forwardToEngineOrchestrator(
     constraints: body.payload?.options ? [JSON.stringify(body.payload.options)] : undefined,
   };
 
-  const orch = getEngineOrch();
-  orch.createProject(projectConfig);
+  try {
+    const orch = getEngineOrch();
+    orch.createProject(projectConfig);
+
+    // 记录项目映射（超限时清理旧条目）
+    if (engineProjects.size >= ENGINE_PROJECTS_MAX) {
+      const cutoff = Date.now() - ENGINE_PROJECTS_TTL;
+      for (const [k, v] of engineProjects) {
+        if (v.createdAt < cutoff) engineProjects.delete(k);
+      }
+    }
+    const entry = { taskId: task.id, projectName: projectConfig.name, status: 'created', createdAt: Date.now() };
+    engineProjects.set(projectConfig.name, entry);
+
+    // 启动编排（非阻塞）
+    orch.runCurrentPhase().then(() => {
+      entry.status = 'running';
+      console.log(`[EngineBridge] Orchestration started for ${projectConfig.name}`);
+    }).catch((err: unknown) => {
+      entry.status = 'failed';
+      console.warn(`[EngineBridge] Orchestration failed: ${err instanceof Error ? err.message : String(err)}`);
+    });
+  } catch (err: unknown) {
+    console.warn('[EngineBridge] Engine orchestrator project creation failed (non-fatal):', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/** 获取引擎项目列表（用于 MCP system_health / HTTP 桥接） */
+function getEngineProjects(): typeof engineProjects {
+  return engineProjects;
 }
 
 export async function apiRoutes(fastify: FastifyInstance) {
@@ -318,9 +353,12 @@ export async function apiRoutes(fastify: FastifyInstance) {
   fastify.get('/model-orchestrator/chat/stream', async (request: FastifyRequest, reply: FastifyReply) => {
     const query = request.query as { model?: string; message?: string };
     const { registry } = getModelOrch();
-    await registry.refresh();
 
     reply.hijack();
+    const ac = new AbortController();
+    request.raw.on('close', () => { ac.abort(); });
+    request.raw.on('error', () => { ac.abort(); });
+
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -328,17 +366,21 @@ export async function apiRoutes(fastify: FastifyInstance) {
     });
 
     try {
-      const modelId = query.model || (registry.getAll()[0]?.id ?? 'ollama/gemma4:e4b');
+      const modelId = query.model;
+      if (!modelId) throw new Error('model query parameter is required');
       const messages = [{ role: 'user', content: query.message || 'Hello' }];
-      const stream = registry.chatStream(modelId, messages);
+      const stream = registry.chatStream(modelId, messages, { signal: ac.signal });
       for await (const chunk of stream) {
+        if (ac.signal.aborted) break;
         reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
       }
       reply.raw.write('data: [DONE]\n\n');
     } catch (err: any) {
-      reply.raw.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+      if (!reply.raw.destroyed) {
+        reply.raw.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+      }
     }
-    reply.raw.end();
+    if (!reply.raw.destroyed) reply.raw.end();
   });
 
   // ── 技能路由 ──
@@ -355,7 +397,14 @@ export async function apiRoutes(fastify: FastifyInstance) {
     const { skillId } = request.params as { skillId: string };
     try {
       const controller = new SkillController({});
-      const result = await (controller as any).execute({ task: skillId, input: JSON.stringify(request.body || {}), sessionId: '' });
+      const ctx: SkillExecutionContext = {
+        task: skillId,
+        input: JSON.stringify(request.body || {}),
+        sessionId: '',
+        retrievedMemories: [],
+        selectedSkills: [],
+      };
+      const result = await controller.execute(ctx);
       reply.send({ skillId, result });
     } catch (err) {
       reply.code(502).send({ error: { code: 'SKILL_EXEC_FAILED', message: String(err) } });

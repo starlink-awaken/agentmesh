@@ -1,6 +1,6 @@
 import type { ModelDescriptor } from '@agentmesh/core-types';
 import type { ModelProvider } from './base.js';
-import { healthCheck, httpPost, checkedJson, parseOllamaResponse } from './base.js';
+import { healthCheck, httpPost, checkedJson, parseOllamaResponse, createBufferReader } from './base.js';
 import type { ChatOptions, ChatResult, StreamChunk } from '../types.js';
 
 export class OllamaProvider implements ModelProvider {
@@ -52,23 +52,14 @@ export class OllamaProvider implements ModelProvider {
       signal: options?.signal,
     });
     if (!res.ok) throw new Error(`Ollama stream failed: ${res.status}`);
-    const reader = res.body?.getReader();
+    const reader = res.body?.getReader() as ReadableStreamDefaultReader<Uint8Array> | undefined;
     if (!reader) throw new Error('No response body');
-    const decoder = new TextDecoder();
-    let buffer = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const data = JSON.parse(line);
-          yield { id: `ollama-${Date.now()}`, model, content: data.message?.content || '', finishReason: data.done ? 'stop' : null };
-        } catch { /* skip malformed lines */ }
-      }
+    for await (const line of createBufferReader(reader)) {
+      if (!line.trim()) continue;
+      try {
+        const data = JSON.parse(line);
+        yield { id: `ollama-${Date.now()}`, model, content: data.message?.content || '', finishReason: data.done ? 'stop' : null };
+      } catch { /* skip */ }
     }
   }
 }

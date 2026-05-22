@@ -8,6 +8,11 @@ import { createVectorStore } from '@agentmesh/toolkit';
 import type { IVectorStore } from '@agentmesh/toolkit';
 import type { AgentMessage } from '../types/index.js';
 
+// ChromaVectorStore 特有初始化方法（不在 IVectorStore 接口中）
+interface InitializableVectorStore extends IVectorStore {
+  initialize(): Promise<void>;
+}
+
 export class VectorStore {
   private store: IVectorStore | null = null;
   private isInitialized = false;
@@ -38,8 +43,8 @@ export class VectorStore {
         collectionName: this.collectionName,
       });
 
-      // 调用 initialize（IVectorStore 接口不包含，通过 any 转换）
-      await (sv as any).initialize();
+      // 调用 initialize（IVectorStore 接口不包含，由 InitializableVectorStore 扩展）
+      await (sv as InitializableVectorStore).initialize();
 
       this.store = sv;
       this.isInitialized = true;

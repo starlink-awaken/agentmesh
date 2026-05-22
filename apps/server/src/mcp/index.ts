@@ -10,9 +10,13 @@ import {
   CallToolRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import type { LocalModelDiscoverer, ModelRegistry, ModelScheduler } from '@agentmesh/model-orchestrator';
+import { initFromConfig, LocalModelDiscoverer as Discoverer } from '@agentmesh/model-orchestrator';
 import type { TaskManager } from '@agentmesh/gateway';
+import { TaskManager as GatewayTaskManager } from '@agentmesh/gateway';
 import type { SkillLoader, SkillController } from '@agentmesh/toolkit';
+import { SkillLoader as GatewaySkillLoader, SkillController as GatewaySkillController } from '@agentmesh/toolkit';
 import type { MetricsCollector } from '@agentmesh/engine';
+import { MetricsCollector as EngineMetricsCollector } from '@agentmesh/engine';
 
 // ── 依赖注入 ──
 
@@ -28,7 +32,7 @@ export interface MCPServerDeps {
 
 // ── Tool 定义 ──
 
-const TOOLS = [
+export const TOOLS = [
   {
     name: 'models_list',
     description: '列出所有可用模型（本地 + 云端）',
@@ -200,8 +204,9 @@ async function handleToolCall(
       const controller = deps?.skillController;
       if (!controller) return json({ skillId: args.skillId, result: '[placeholder]', info: 'SkillController not connected' });
       try {
-        // SkillController.execute returns the result
-        const result = await (controller as any).execute(args.skillId as string, args.input || {});
+        const result = await controller.execute(
+          { task: args.skillId as string, input: JSON.stringify(args.input || {}), sessionId: '', retrievedMemories: [], selectedSkills: [] },
+        );
         return json({ skillId: args.skillId, result });
       } catch (err: any) { return json({ error: err.message }); }
     }
@@ -239,9 +244,50 @@ function json(data: unknown): { content: { type: 'text'; text: string }[] } {
 // ── 启动入口 ──
 
 export async function startMCPServer(deps?: MCPServerDeps): Promise<void> {
+  // 无 DI 时自初始化真实实现
+  if (!deps) deps = await createDefaultDeps();
   const server = createMCPServer(deps);
   const transport = new StdioServerTransport();
   await server.connect(transport);
+}
+
+/**
+ * 自初始化真实依赖（无 DI 场景下的默认实现）
+ * 独立组件并行初始化，互不阻塞。
+ */
+async function createDefaultDeps(): Promise<MCPServerDeps> {
+  const { registry, scheduler } = initFromConfig();
+  const discoverer = new Discoverer();
+  await registry.refresh();
+  console.error(`[MCP] Self-init: ${registry.getAll().length} models discovered`);
+
+  // 并行初始化技能/指标/任务组件
+  const [skills, metrics, tasks] = await Promise.allSettled([
+    (async () => {
+      const sl = new GatewaySkillLoader();
+      const sc = new GatewaySkillController({});
+      console.error(`[MCP] Skills: ${sl.getAll().length} available`);
+      return { skillLoader: sl, skillController: sc };
+    })(),
+    (async () => {
+      const mc = new EngineMetricsCollector();
+      console.error('[MCP] MetricsCollector initialized');
+      return mc;
+    })(),
+    (async () => {
+      const tm = new GatewayTaskManager();
+      console.error('[MCP] TaskManager initialized');
+      return tm;
+    })(),
+  ]);
+
+  return {
+    registry, scheduler, discoverer,
+    taskManager: tasks.status === 'fulfilled' ? tasks.value : undefined,
+    skillLoader: skills.status === 'fulfilled' ? skills.value.skillLoader : undefined,
+    skillController: skills.status === 'fulfilled' ? skills.value.skillController : undefined,
+    metricsCollector: metrics.status === 'fulfilled' ? metrics.value : undefined,
+  };
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1]!.replace(/^.*[\\/]/, ''))) {

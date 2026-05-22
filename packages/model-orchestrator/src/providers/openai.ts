@@ -1,6 +1,6 @@
 import type { ModelDescriptor } from '@agentmesh/core-types';
 import type { ModelProvider } from './base.js';
-import { httpPost, checkedJson, healthCheck, parseOpenAIResponse } from './base.js';
+import { httpPost, checkedJson, healthCheck, parseOpenAIResponse, createBufferReader } from './base.js';
 import type { ChatOptions, ChatResult, StreamChunk } from '../types.js';
 
 export class OpenAIProvider implements ModelProvider {
@@ -53,27 +53,17 @@ export class OpenAIProvider implements ModelProvider {
       signal: options?.signal,
     });
     if (!res.ok) throw new Error(`OpenAI stream failed: ${res.status}`);
-    const reader = res.body?.getReader();
+    const reader = res.body?.getReader() as ReadableStreamDefaultReader<Uint8Array> | undefined;
     if (!reader) throw new Error('No response body');
-    const decoder = new TextDecoder();
-    let buffer = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith('data: ')) continue;
-        const data = trimmed.slice(6);
-        if (data === '[DONE]') { yield { id: '', model, content: '', finishReason: 'stop' }; return; }
-        try {
-          const json = JSON.parse(data);
-          const content = json.choices?.[0]?.delta?.content || '';
-          yield { id: json.id || '', model: json.model || model, content, finishReason: json.choices?.[0]?.finish_reason || null };
-        } catch { /* skip malformed chunks */ }
-      }
+    for await (const line of createBufferReader(reader)) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith('data: ')) continue;
+      const data = trimmed.slice(6);
+      if (data === '[DONE]') { yield { id: '', model, content: '', finishReason: 'stop' }; return; }
+      try {
+        const json = JSON.parse(data);
+        yield { id: json.id || '', model: json.model || model, content: json.choices?.[0]?.delta?.content || '', finishReason: json.choices?.[0]?.finish_reason || null };
+      } catch { /* skip */ }
     }
   }
 
