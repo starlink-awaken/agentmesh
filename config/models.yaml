@@ -41,41 +41,41 @@ cloud:
 # 按模型 ID 前缀匹配（最长匹配优先）
 # 本地模型 $0 使用成本，优先级取决于延迟和大小
 model_overrides:
-  # 轻量模型 (4-5B) — 适合简单问答
+  # 轻量模型 — 极快响应
+  - id_prefix: gemma4:e4b
+    avg_latency_ms: 500
+    cost_per_1k_input: 0
+    cost_per_1k_output: 0
   - id_prefix: gemma4:latest
     avg_latency_ms: 4700
     cost_per_1k_input: 0
     cost_per_1k_output: 0
-  - id_prefix: gemma4:e4b
-    avg_latency_ms: 4500
-    cost_per_1k_input: 0
-    cost_per_1k_output: 0
   - id_prefix: gemma4:e2b
-    avg_latency_ms: 13000
+    avg_latency_ms: 14000
     cost_per_1k_input: 0
     cost_per_1k_output: 0
 
-  # 中等模型 (8-9B) — 日常开发使用
+  # 中等模型 — 日常使用
   - id_prefix: qwen3.5:4b
-    avg_latency_ms: 9100
+    avg_latency_ms: 37500
     cost_per_1k_input: 0
     cost_per_1k_output: 0
   - id_prefix: qwen3.5-9b
-    avg_latency_ms: 12200
+    avg_latency_ms: 60000
     cost_per_1k_input: 0
     cost_per_1k_output: 0
   - id_prefix: Qwopus3.5-9B
-    avg_latency_ms: 13000
+    avg_latency_ms: 49700
     cost_per_1k_input: 0
     cost_per_1k_output: 0
 
-  # 大模型 (27-35B) — 编码/复杂任务
-  - id_prefix: qwen3.6:27b
-    avg_latency_ms: 32600
+  # 大模型 — 复杂任务
+  - id_prefix: qwen3.6:35b
+    avg_latency_ms: 27000
     cost_per_1k_input: 0
     cost_per_1k_output: 0
-  - id_prefix: qwen3.6:35b
-    avg_latency_ms: 28500
+  - id_prefix: qwen3.6:27b
+    avg_latency_ms: 60000
     cost_per_1k_input: 0
     cost_per_1k_output: 0
 
