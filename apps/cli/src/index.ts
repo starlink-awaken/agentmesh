@@ -37,13 +37,23 @@ async function main() {
           const { registry } = initFromConfig();
           await registry.refresh();
           const models = registry.getAll();
-          console.log(JSON.stringify(models, null, 2));
+          console.log(`\n  Discovered models: ${models.length}`);
+          for (const m of models) {
+            const loc = m.location === 'local' ? '🏠' : '☁️';
+            const status = m.isAvailable ? '✓' : '✗';
+            console.log(`  ${status} ${loc} ${m.id} (ctx: ${m.contextWindow})`);
+          }
+          if (models.length === 0) console.log('  (no models found — check if services are running)');
           break;
         }
         case 'health': {
           const { registry } = initFromConfig();
           const models = await registry.refresh();
-          console.log(`在线: ${models.filter(m => m.isAvailable).length}/${models.length}`);
+          const online = models.filter(m => m.isAvailable).length;
+          console.log(`\n  Models: ${online}/${models.length} online`);
+          for (const m of models) {
+            console.log(`  ${m.isAvailable ? '✓' : '✗'} ${m.id} — ${m.location}`);
+          }
           break;
         }
         default:
@@ -53,12 +63,9 @@ async function main() {
     }
 
     case 'status':
-      console.log(JSON.stringify({
-        version: '2.0.0',
-        uptime: process.uptime(),
-        memory: process.memoryUsage(),
-        node: process.version,
-      }, null, 2));
+      console.log(`\n  Agent Mesh v2.0.0`);
+      console.log(`  Uptime: ${Math.floor(process.uptime() / 60)}m`);
+      console.log(`  Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
       break;
 
     case 'skills':

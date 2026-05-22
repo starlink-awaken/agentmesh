@@ -27,6 +27,7 @@
       "version": "2.0.0",
       "dependencies": {
         "@agentmesh/core-types": "workspace:*",
+        "@agentmesh/engine": "workspace:*",
         "@agentmesh/gateway": "workspace:*",
         "@agentmesh/model-orchestrator": "workspace:*",
         "@agentmesh/toolkit": "workspace:*",
@@ -63,6 +64,7 @@
       },
       "dependencies": {
         "@agentmesh/core-types": "workspace:*",
+        "@agentmesh/model-orchestrator": "workspace:*",
         "@agentmesh/toolkit": "workspace:*",
         "@fastify/cors": "^11.2.0",
         "@fastify/websocket": "^11.2.0",

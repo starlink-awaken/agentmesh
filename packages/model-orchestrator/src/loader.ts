@@ -50,14 +50,23 @@ export function loadModelsConfig(configPath?: string): ModelsConfig {
   const path = configPath || findConfigFile();
   if (!path) {
     console.warn('[ModelCfg] No models.yaml found, using defaults (local only)');
-    return {
-      local: { ollama: { enabled: true }, lm_studio: { enabled: true }, llama_cpp: { enabled: true } },
-      cloud: {},
-    };
+    return defaults();
   }
-  const raw = parse(readFileSync(path, 'utf-8')) as ModelsConfig;
-  console.log(`[ModelCfg] Loaded from: ${path}`);
-  return raw;
+  try {
+    const raw = parse(readFileSync(path, 'utf-8')) as ModelsConfig;
+    console.log(`[ModelCfg] Loaded from: ${path}`);
+    return raw;
+  } catch {
+    console.warn(`[ModelCfg] Failed to load ${path}, using defaults`);
+    return defaults();
+  }
+}
+
+function defaults(): ModelsConfig {
+  return {
+    local: { ollama: { enabled: true }, lm_studio: { enabled: true }, llama_cpp: { enabled: true } },
+    cloud: {},
+  };
 }
 
 export function getEnv(key: string): string {
