@@ -314,6 +314,33 @@ export async function apiRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // SSE 流式聊天端点
+  fastify.get('/model-orchestrator/chat/stream', async (request: FastifyRequest, reply: FastifyReply) => {
+    const query = request.query as { model?: string; message?: string };
+    const { registry } = getModelOrch();
+    await registry.refresh();
+
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+
+    try {
+      const modelId = query.model || (registry.getAll()[0]?.id ?? 'ollama/gemma4:e4b');
+      const messages = [{ role: 'user', content: query.message || 'Hello' }];
+      const stream = registry.chatStream(modelId, messages);
+      for await (const chunk of stream) {
+        reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+      reply.raw.write('data: [DONE]\n\n');
+    } catch (err: any) {
+      reply.raw.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+    }
+    reply.raw.end();
+  });
+
   // ── 技能路由 ──
   fastify.get('/skills', async (_req: FastifyRequest, reply: FastifyReply) => {
     try {

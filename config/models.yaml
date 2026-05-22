@@ -21,20 +21,22 @@ local:
       #   port: 8080
       #   model_path: /models/llama-3.1-8b.gguf
 
-# 云端模型
+# 云端模型（需设置 API Key 环境变量）
+# 设置方式: export <API_KEY_ENV>=sk-xxxx
+# 如无 API Key 请将 enabled 改为 false
 cloud:
   openai:
-    enabled: false
+    enabled: true              # ← 改为 true，需要设置 OPENAI_API_KEY 环境变量
     api_key_env: OPENAI_API_KEY
     base_url: https://api.openai.com/v1
 
   anthropic:
-    enabled: false
+    enabled: true              # ← 改为 true，需要设置 ANTHROPIC_API_KEY 环境变量
     api_key_env: ANTHROPIC_API_KEY
     base_url: https://api.anthropic.com/v1
 
   openrouter:
-    enabled: false
+    enabled: true              # ← 改为 true，需要设置 OPENROUTER_API_KEY 环境变量
     api_key_env: OPENROUTER_API_KEY
 
 # 模型元数据覆盖 — 用于调度器的成本/延迟感知

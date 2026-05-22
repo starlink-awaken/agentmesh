@@ -1,7 +1,7 @@
 import type { ModelDescriptor } from '@agentmesh/core-types';
 import type { ModelProvider } from './base.js';
 import { healthCheck, httpPost, checkedJson, parseOllamaResponse } from './base.js';
-import type { ChatOptions, ChatResult } from '../types.js';
+import type { ChatOptions, ChatResult, StreamChunk } from '../types.js';
 
 export class OllamaProvider implements ModelProvider {
   readonly name = 'ollama';
@@ -42,5 +42,33 @@ export class OllamaProvider implements ModelProvider {
     );
     const body = await checkedJson<any>(res, 'Ollama chat');
     return parseOllamaResponse(body, model);
+  }
+
+  async *stream(model: string, messages: unknown[], options?: ChatOptions): AsyncIterable<StreamChunk> {
+    const res = await fetch(`${this.baseUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: model.replace('ollama/', ''), messages, stream: true }),
+      signal: options?.signal,
+    });
+    if (!res.ok) throw new Error(`Ollama stream failed: ${res.status}`);
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error('No response body');
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const data = JSON.parse(line);
+          yield { id: `ollama-${Date.now()}`, model, content: data.message?.content || '', finishReason: data.done ? 'stop' : null };
+        } catch { /* skip malformed lines */ }
+      }
+    }
   }
 }

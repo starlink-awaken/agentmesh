@@ -1,6 +1,6 @@
 import type { ModelDescriptor } from '@agentmesh/core-types';
 import type { ModelProvider } from './providers/base.js';
-import type { ChatOptions, ChatResult } from './types.js';
+import type { ChatOptions, ChatResult, StreamChunk } from './types.js';
 
 /**
  * ModelRegistry — 模型注册表
@@ -68,6 +68,23 @@ export class ModelRegistry {
       return await provider.chat(modelId, messages, options);
     } finally {
       this.schedulerRef?.releaseLoad(modelId);
+    }
+  }
+
+  /**
+   * 流式调用模型。
+   * 如果 Provider 支持 stream()，则委托给它；否则回退到 chat() 包装为单块流。
+   */
+  async *chatStream(modelId: string, messages: unknown[], options?: ChatOptions): AsyncIterable<StreamChunk> {
+    const entry = this.models.get(modelId);
+    if (!entry) throw new Error(`Model ${modelId} not found`);
+    const provider = this.providers.get(entry.providerName);
+    if (!provider) throw new Error(`Provider ${entry.providerName} not found`);
+    if (provider.stream) {
+      yield* provider.stream(modelId, messages, options);
+    } else {
+      const result = await provider.chat(modelId, messages, options);
+      yield { id: result.id, model: result.model, content: result.content, finishReason: result.finishReason };
     }
   }
 

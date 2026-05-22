@@ -45,7 +45,12 @@ export class VectorStore {
       this.isInitialized = true;
       console.log('[VectorStore] Initialized successfully (toolkit createVectorStore)');
     } catch (error) {
-      console.warn('[VectorStore] Failed to initialize (ChromaDB not running?):', error);
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('ERR_INVALID_URL') || msg.includes('connect')) {
+        console.warn('[VectorStore] ChromaDB not available, vector features disabled');
+      } else {
+        console.warn('[VectorStore] Failed to initialize:', msg);
+      }
       this.isInitialized = false;
     }
   }

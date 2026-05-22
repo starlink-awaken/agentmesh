@@ -1,0 +1,177 @@
+{
+  "test": "full-compilation",
+  "timestamp": 1779421720503,
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v24.3.0",
+    "cpuCount": 18,
+    "totalMemory": "69MB",
+    "timestamp": "2026-05-22T03:48:40.503Z"
+  },
+  "summary": {
+    "totalSamples": 10,
+    "avgTotalTime": 0.07182683333242797,
+    "avgLexerThroughput": 7639.346874929994,
+    "avgParserThroughput": 17295.149135006493,
+    "avgCodeGenThroughput": 1679.1800755237082
+  },
+  "results": [
+    {
+      "sample": "simple-agent",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 81,
+          "timeMs": 0.0141250000015134,
+          "throughput": 5734.513273721868
+        },
+        "parser": {
+          "nodeCount": 7,
+          "timeMs": 0.0008330000018759165,
+          "throughput": 7000
+        },
+        "typeChecker": {
+          "timeMs": 0.006916999998793472,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 20,
+          "timeMs": 0.008458000000246102,
+          "throughput": 2364.625206835902
+        },
+        "totalTime": 0.03033300000242889,
+        "sourceSize": 546
+      }
+    },
+    {
+      "sample": "data-processor",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 249,
+          "timeMs": 0.03454200000123819,
+          "throughput": 7208.615598143545
+        },
+        "parser": {
+          "nodeCount": 38,
+          "timeMs": 0.0012089999981981236,
+          "throughput": 31430.934703585324
+        },
+        "typeChecker": {
+          "timeMs": 0.013542000000597909,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 25,
+          "timeMs": 0.012374999998428393,
+          "throughput": 2020.2020204585829
+        },
+        "totalTime": 0.06166799999846262,
+        "sourceSize": 1709
+      }
+    },
+    {
+      "sample": "enterprise-workflow",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 563,
+          "timeMs": 0.06787500000064028,
+          "throughput": 8294.659300105915
+        },
+        "parser": {
+          "nodeCount": 106,
+          "timeMs": 0.0037919999995210674,
+          "throughput": 27953.586501420854
+        },
+        "typeChecker": {
+          "timeMs": 0.0388329999987036,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 27,
+          "timeMs": 0.034917000000859844,
+          "throughput": 773.2623077393566
+        },
+        "totalTime": 0.1454169999997248,
+        "sourceSize": 4064
+      }
+    },
+    {
+      "sample": "multi-domain-orchestrator",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 624,
+          "timeMs": 0.06979199999841512,
+          "throughput": 8940.852820010461
+        },
+        "parser": {
+          "nodeCount": 81,
+          "timeMs": 0.003832999998849118,
+          "throughput": 21132.27237785566
+        },
+        "typeChecker": {
+          "timeMs": 0.024249999998573912,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 37,
+          "timeMs": 0.024459000000206288,
+          "throughput": 1512.7355983354978
+        },
+        "totalTime": 0.12233399999604444,
+        "sourceSize": 4100
+      }
+    },
+    {
+      "sample": "minimal-agent",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 75,
+          "timeMs": 0.009500000000116415,
+          "throughput": 7894.7368420085195
+        },
+        "parser": {
+          "nodeCount": 7,
+          "timeMs": 0.0022920000010344665,
+          "throughput": 3054.101220262057
+        },
+        "typeChecker": {
+          "timeMs": 0.004124999999476131,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 20,
+          "timeMs": 0.005874999998923158,
+          "throughput": 3404.25531977291
+        },
+        "totalTime": 0.02179199999955017,
+        "sourceSize": 427
+      }
+    },
+    {
+      "sample": "transform-agent",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 218,
+          "timeMs": 0.02808299999742303,
+          "throughput": 7762.703415589654
+        },
+        "parser": {
+          "nodeCount": 33,
+          "timeMs": 0.0024999999986903276,
+          "throughput": 13200.00000691507
+        },
+        "typeChecker": {
+          "timeMs": 0.010375000001658918,
+          "errorCount": 1
+        },
+        "codeGenerator": {
+          "linesOfCode": 0,
+          "timeMs": 0.008459000000584638,
+          "throughput": 0
+        },
+        "totalTime": 0.049416999998356914,
+        "sourceSize": 1407
+      }
+    }
+  ]
+}

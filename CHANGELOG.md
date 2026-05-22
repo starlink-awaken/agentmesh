@@ -1,6 +1,25 @@
 # Changelog
 
-## [1.5.0] — 2026-05-17
+## [2.0.0] — 2026-05-22
+
+### Added (新功能)
+- **Monorepo Skeleton**: 7-package monorepo (`@agentmesh/gateway`, `@agentmesh/engine`, `@agentmesh/toolkit`, `@agentmesh/core-types`, `@agentmesh/model-orchestrator`, `@agentmesh/cli`, `@agentmesh/server`), 113,561 lines of source, 144 test files
+- **core-types**: 17 unified cross-package TypeScript interfaces (Agent, Task, Model, Event, Space, Provider)
+- **Model Orchestrator**: 6-Provider aggregation discovery + dynamic scheduler with fallback chains
+- **MCP Server**: 11 MCP tools (tasks, skills, models, system metrics) with stdio mode
+- **Multi-process Launcher**: Unified `apps/server/src/launcher.ts` orchestrating all services
+- **Engine Integration**: Honeycomb Engine embedded as `@agentmesh/engine` for collaborative agent execution
+- **Toolkit Bridge**: Agent Toolkit as `@agentmesh/toolkit` — deduplicated event-bus, retry, skill loading
+
+### Changed (变更)
+- **Monorepo Restructure**: Three previously independent projects (AgentMesh Gateway, Honeycomb Engine, Agent Toolkit) merged into a single monorepo at `packages/` and `apps/`
+- **Phase 4 Dedup**: event-bus and retry logic bridged to use toolkit imports instead of local copies
+- **Provider architecture**: Extracted `base.ts` shared utilities across all providers for parallelization and consistency
+- **Build Order**: `build:order` script ensures core-types → toolkit → model-orchestrator → gateway dependency chain
+
+### Fixed (修复)
+- Cross-project import resolution via workspace protocol (`"workspace:*"`)
+- Duplicate provider logic centralized into base class pattern
 
 ### Added
 - **GatewayContainer**: Unified DI lifecycle manager wrapping all core singletons (`init → reload → dispose`)
