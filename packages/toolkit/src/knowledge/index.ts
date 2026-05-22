@@ -36,6 +36,7 @@ export {
   MemoryVectorStore,
   createVectorStore,
 } from './VectorStore.js';
+export { ChromaVectorStore } from './ChromaVectorStore.js';
 export type {
   VectorDocument,
   VectorSearchResult,

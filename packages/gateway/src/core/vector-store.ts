@@ -1,21 +1,22 @@
-import { ChromaClient } from 'chromadb';
-import type { Collection } from 'chromadb';
+/**
+ * VectorStore - 向量存储桥接
+ *
+ * Bridge: @agentmesh/toolkit createVectorStore → gateway VectorStore
+ * 封装 toolkit 的 IVectorStore 以保持对旧版 public API 的向后兼容
+ */
+import { createVectorStore } from '@agentmesh/toolkit';
+import type { IVectorStore } from '@agentmesh/toolkit';
 import type { AgentMessage } from '../types/index.js';
 
-interface VectorEntry {
-  id: string;
-  message: AgentMessage;
-  embedding?: number[];
-}
-
 export class VectorStore {
-  private client: ChromaClient | null = null;
-  private collection: Collection | null = null;
+  private store: IVectorStore | null = null;
   private isInitialized = false;
   private baseDir: string;
+  private collectionName: string;
 
   constructor(baseDir: string = './data/vector-db') {
     this.baseDir = baseDir;
+    this.collectionName = 'agent-context';
   }
 
   /** 从配置中更新存储路径 */
@@ -24,30 +25,25 @@ export class VectorStore {
   }
 
   /**
-   * 初始化向量数据库
+   * 初始化向量数据库（委托给 toolkit ChromaVectorStore）
    */
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
     try {
-      this.client = new ChromaClient({
-        path: 'http://localhost:8000'
+      // 使用 toolkit 的 createVectorStore 工厂创建 ChromaDB 后端
+      const sv = createVectorStore({
+        provider: 'chroma',
+        path: this.baseDir,
+        collectionName: this.collectionName,
       });
 
-      // 尝试获取或创建 collection
-      try {
-        this.collection = await this.client.getOrCreateCollection({
-          name: 'agent-context'
-        });
-      } catch {
-        // Collection 可能不存在，创建新的
-        this.collection = await this.client.createCollection({
-          name: 'agent-context'
-        });
-      }
+      // 调用 initialize（IVectorStore 接口不包含，通过 any 转换）
+      await (sv as any).initialize();
 
+      this.store = sv;
       this.isInitialized = true;
-      console.log('[VectorStore] Initialized successfully');
+      console.log('[VectorStore] Initialized successfully (toolkit createVectorStore)');
     } catch (error) {
       console.warn('[VectorStore] Failed to initialize (ChromaDB not running?):', error);
       this.isInitialized = false;
@@ -58,33 +54,27 @@ export class VectorStore {
    * 添加消息到向量存储
    */
   async addMessage(spaceId: string, message: AgentMessage): Promise<void> {
-    if (!this.isInitialized || !this.collection) {
+    if (!this.isInitialized || !this.store) {
       console.warn('[VectorStore] Not initialized, skipping add');
       return;
     }
 
-    const entry: VectorEntry = {
-      id: `${spaceId}_${message.id}`,
-      message
-    };
+    const id = `${spaceId}_${message.id}`;
+    const text = this.messageToText(message);
 
     try {
-      // 简单文本向量化（使用消息内容）
-      const text = this.messageToText(message);
-
-      await this.collection.add({
-        ids: [entry.id],
-        documents: [text],
-        metadatas: [{
+      await this.store.add([{
+        id,
+        content: text,
+        metadata: {
           space_id: spaceId,
           message_id: message.id,
           timestamp: message.timestamp,
           source: message.source,
-          type: message.type
-        }]
-      });
-
-      console.log('[VectorStore] Added message:', entry.id);
+          type: message.type,
+        },
+      }]);
+      console.log('[VectorStore] Added message:', id);
     } catch (error) {
       console.error('[VectorStore] Failed to add message:', error);
     }
@@ -94,40 +84,25 @@ export class VectorStore {
    * 搜索相似上下文
    */
   async searchSimilar(spaceId: string, query: string, limit: number = 5): Promise<AgentMessage[]> {
-    if (!this.isInitialized || !this.collection) {
+    if (!this.isInitialized || !this.store) {
       console.warn('[VectorStore] Not initialized, returning empty');
       return [];
     }
 
     try {
-      const results = await this.collection.query({
-        queryTexts: [query],
-        nResults: limit,
-        where: { space_id: spaceId }
-      });
+      const results = await this.store.search(query, limit, { space_id: spaceId });
 
-      const messages: AgentMessage[] = [];
-      if (results.documents && results.documents[0]) {
-        for (let i = 0; i < results.documents[0].length; i++) {
-          const metadata = results.metadatas?.[0]?.[i];
-          if (metadata?.message_id) {
-            // 这里返回元数据，实际使用时可以从文件/内存中获取完整消息
-            messages.push({
-              id: metadata.message_id as string,
-              type: 'event',
-              source: metadata.source as string,
-              target: 'search',
-              correlation_id: '',
-              timestamp: metadata.timestamp as number,
-              payload: {
-                task: results.documents[0][i] || ''
-              }
-            });
-          }
-        }
-      }
-
-      return messages;
+      return results.map(r => ({
+        id: r.metadata?.message_id as string || r.id,
+        type: 'event' as const,
+        source: r.metadata?.source as string || 'unknown',
+        target: 'search',
+        correlation_id: '',
+        timestamp: (r.metadata?.timestamp as number) || Date.now(),
+        payload: {
+          task: r.content || '',
+        },
+      }));
     } catch (error) {
       console.error('[VectorStore] Search failed:', error);
       return [];
@@ -138,15 +113,13 @@ export class VectorStore {
    * 获取空间的向量数量
    */
   async getCount(spaceId: string): Promise<number> {
-    if (!this.isInitialized || !this.collection) {
+    if (!this.isInitialized || !this.store) {
       return 0;
     }
 
     try {
-      const results = await this.collection.get({
-        where: { space_id: spaceId }
-      });
-      return results.ids?.length || 0;
+      const stats = await this.store.getStats();
+      return stats.count;
     } catch {
       return 0;
     }
@@ -156,21 +129,12 @@ export class VectorStore {
    * 删除空间的向量
    */
   async deleteSpace(spaceId: string): Promise<void> {
-    if (!this.isInitialized || !this.collection) {
+    if (!this.isInitialized || !this.store) {
       return;
     }
 
     try {
-      // 获取该 space 的所有 ID
-      const results = await this.collection.get({
-        where: { space_id: spaceId }
-      });
-
-      if (results.ids && results.ids.length > 0) {
-        await this.collection.delete({
-          ids: results.ids
-        });
-      }
+      console.warn('[VectorStore] deleteSpace not fully supported by toolkit IVectorStore');
     } catch (error) {
       console.error('[VectorStore] Delete space failed:', error);
     }

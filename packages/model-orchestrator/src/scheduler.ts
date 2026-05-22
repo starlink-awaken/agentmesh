@@ -14,6 +14,7 @@ export class ModelScheduler {
   private registry: ModelRegistry;
   private config: SchedulerConfig;
   private loadMap = new Map<string, LoadInfo>();
+  private _refreshTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(registry: ModelRegistry, config?: Partial<SchedulerConfig>) {
     this.registry = registry;
@@ -91,6 +92,34 @@ export class ModelScheduler {
     const load = this.loadMap.get(modelId);
     if (load) {
       load.activeRequests = Math.max(0, load.activeRequests - 1);
+    }
+  }
+
+  /**
+   * 启动定时自动刷新模型注册表
+   * @param intervalMs 刷新间隔（毫秒），默认 30000
+   * @returns { dispose: () => void } 清除定时器的析构函数
+   */
+  startAutoRefresh(intervalMs: number = 30000): { dispose: () => void } {
+    // 清除已有定时器，防止重复调用
+    this.stopAutoRefresh();
+
+    this._refreshTimer = setInterval(() => {
+      this.registry.refresh().catch((err: unknown) => {
+        console.warn('[ModelScheduler] auto-refresh failed:', err instanceof Error ? err.message : String(err));
+      });
+    }, intervalMs);
+
+    return {
+      dispose: () => this.stopAutoRefresh(),
+    };
+  }
+
+  /** 停止自动刷新 */
+  private stopAutoRefresh(): void {
+    if (this._refreshTimer !== null) {
+      clearInterval(this._refreshTimer);
+      this._refreshTimer = null;
     }
   }
 

@@ -85,6 +85,7 @@ export {
   DataSourceType,
   MemoryVectorStore,
   createVectorStore,
+  ChromaVectorStore,
   HybridRetriever,
   createHybridRetriever,
 } from './knowledge/index.js';

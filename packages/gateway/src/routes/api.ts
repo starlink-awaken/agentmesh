@@ -9,12 +9,50 @@ import { circuitBreakerRegistry } from '../model-gateway/circuit-breaker.js';
 import { getGateway } from '../core/gateway.js';
 import { initFromConfig } from '@agentmesh/model-orchestrator';
 import { SkillLoader, SkillController } from '@agentmesh/toolkit';
+import { HoneycombOrchestrator } from '@agentmesh/engine';
+import type { ProjectConfig } from '@agentmesh/engine';
 
 // 启动时缓存编排实例（避免每次请求都重复初始化）
 let _modelOrch: ReturnType<typeof initFromConfig> | null = null;
 function getModelOrch() {
   if (!_modelOrch) { _modelOrch = initFromConfig(); }
   return _modelOrch;
+}
+
+// Engine Orchestrator 懒加载单例
+let _engineOrch: HoneycombOrchestrator | null = null;
+function getEngineOrch(): HoneycombOrchestrator {
+  if (!_engineOrch) {
+    _engineOrch = new HoneycombOrchestrator({
+      log_level: 'warn',
+    });
+  }
+  return _engineOrch;
+}
+
+/**
+ * 将 Gateway 任务转发到 Engine Orchestrator 创建项目。
+ * 非阻塞：失败仅记录日志，不影响 Gateway 主流程。
+ */
+async function forwardToEngineOrchestrator(
+  task: { id: string; request: AgentMessage },
+  body: Partial<AgentMessage>,
+): Promise<void> {
+  const taskDescription =
+    (body.payload?.task as string | undefined) ||
+    (body.payload as Record<string, unknown>)?.task as string | undefined ||
+    'Task from gateway';
+
+  const projectConfig: ProjectConfig = {
+    name: `gateway-task-${task.id.slice(0, 8)}`,
+    description: taskDescription,
+    archetype: 'software-dev',
+    goals: [taskDescription],
+    constraints: body.payload?.options ? [JSON.stringify(body.payload.options)] : undefined,
+  };
+
+  const orch = getEngineOrch();
+  orch.createProject(projectConfig);
 }
 
 export async function apiRoutes(fastify: FastifyInstance) {
@@ -67,6 +105,12 @@ export async function apiRoutes(fastify: FastifyInstance) {
 
       try {
         const task = await taskManager.processTask(message);
+
+        // 同时转发任务到 Engine Orchestrator
+        forwardToEngineOrchestrator(task, body).catch((err: unknown) => {
+          console.warn('[EngineBridge] Engine orchestrator forward failed (non-fatal):', err instanceof Error ? err.message : String(err));
+        });
+
         reply.code(202).send({
           task_id: task.id,
           status: task.status,

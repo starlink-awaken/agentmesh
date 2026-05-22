@@ -1,3 +1,14 @@
+/**
+ * Rate Limiter - 基于路径 + IP 的令牌桶限流
+ *
+ * Bridge: @agentmesh/toolkit rate-limit (for HTTP middleware)
+ * Gateway uses path+IP token bucket for model API endpoints, which is incompatible
+ * with toolkit's HTTP middleware RateLimitMiddleware.
+ *
+ * 如果未来需要引入 HTTP 中间件层级的限流，可参考：
+ *   import { RateLimitMiddleware, createRateLimitMiddleware, createIPRateLimitMiddleware } from '@agentmesh/toolkit';
+ */
+
 interface Bucket {
   tokens: number;
   lastRefill: number;
