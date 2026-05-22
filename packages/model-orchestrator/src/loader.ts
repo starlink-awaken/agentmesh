@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'yaml';
 import { OllamaProvider } from './providers/ollama.js';
@@ -165,4 +165,46 @@ export function initFromConfig(configPath?: string): InitResult {
   }
 
   return { registry, scheduler, config };
+}
+
+/**
+ * 监听配置文件变更，自动刷新模型
+ * 返回 unwatch 函数
+ */
+export function watchConfig(
+  registry: ModelRegistry,
+  _scheduler: ModelScheduler,
+  configPath?: string,
+  onRefresh?: (models: import('@agentmesh/core-types').ModelDescriptor[]) => void,
+): () => void {
+  const path = configPath || findConfigFile();
+  if (!path) {
+    console.warn('[ModelCfg] No config file to watch');
+    return () => {};
+  }
+
+  if (!existsSync(path)) {
+    console.warn('[ModelCfg] Config file not found, skipping watch:', path);
+    return () => {};
+  }
+
+  console.log(`[ModelCfg] Watching: ${path}`);
+
+  try {
+    const watcher = watch(path, async (eventType) => {
+      if (eventType !== 'change') return;
+      console.log('[ModelCfg] Config changed, reloading...');
+      try {
+        const models = await registry.refresh();
+        console.log(`[ModelCfg] Reloaded: ${models.length} models`);
+        onRefresh?.(models);
+      } catch (err) {
+        console.error('[ModelCfg] Reload failed:', err);
+      }
+    });
+    return () => { watcher.close(); };
+  } catch (err) {
+    console.warn('[ModelCfg] Failed to start watcher:', err);
+    return () => {};
+  }
 }

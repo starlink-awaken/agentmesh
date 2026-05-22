@@ -14,6 +14,9 @@ export { ModelRegistry } from './registry.js';
 export { initFromConfig, loadModelsConfig } from './loader.js';
 export { scoreModels, listPolicies, registerPolicy } from './policies.js';
 
+export { benchmarkModel, benchmarkLocalModels, benchmarkAndUpdate } from './benchmark.js';
+export { watchConfig } from './loader.js';
+
 export type {
   ProviderConfig,
   ChatOptions,
