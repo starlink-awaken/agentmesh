@@ -2,26 +2,20 @@ import { readFileSync, existsSync } from 'fs';
 import { parse } from 'yaml';
 import { join, dirname } from 'path';
 import type { ModelGatewayConfig } from '../model-gateway/types.js';
+import type {
+  GatewayConfig as CoreGatewayConfig,
+  AgentConfig as CoreAgentConfig,
+  RoutingRule as CoreRoutingRule,
+  AppConfig,
+  ModelsConfig,
+} from '@agentmesh/core-types';
+import { loadAppConfig as loadAppConfigFromModule } from '@agentmesh/model-orchestrator';
 
-export interface AgentConfig {
-  id: string;
-  name: string;
+export interface AgentConfig extends CoreAgentConfig {
   type: 'claude-code' | 'openclaw' | 'process' | 'http';
-  command?: string;
-  args?: string[];
-  env?: Record<string, string>;
-  endpoint?: string;
-  capabilities: string[];
 }
 
-export interface RoutingRule {
-  name: string;
-  keywords: string[];
-  agent?: string;
-  strategy?: 'direct' | 'broadcast';
-  agents?: string[];
-  priority: number;
-}
+export interface RoutingRule extends CoreRoutingRule {}
 
 // YAML 默认配置使用 snake_case 与 gateway.yaml 匹配
 export interface ModelsSection extends ModelGatewayConfig {
@@ -41,12 +35,7 @@ export interface ModelsSection extends ModelGatewayConfig {
   };
 }
 
-export interface GatewayConfig {
-  port: number;
-  wsPort: number;
-  host: string;
-  dataDir: string;
-  logDir: string;
+export interface GatewayConfig extends CoreGatewayConfig {
   logLevel: 'debug' | 'info' | 'warn' | 'error';
   routing: {
     defaultAgent?: string;
@@ -184,3 +173,24 @@ export function getRoutingRules(): RoutingRule[] {
 export function getDefaultAgent(): string | undefined {
   return getConfig().routing.defaultAgent;
 }
+
+// ── 统一配置加载入口 ──
+
+/**
+ * 加载统一应用配置（gateway.yaml + models.yaml）。
+ *
+ * 代理至 @agentmesh/model-orchestrator 的统一加载器。
+ */
+export function loadAppConfig(): AppConfig {
+  return loadAppConfigFromModule();
+}
+
+/**
+ * 重新加载统一应用配置。
+ */
+export function reloadAppConfig(): AppConfig {
+  cachedConfig = null;
+  return loadAppConfigFromModule();
+}
+
+export type { AppConfig, ModelsConfig } from '@agentmesh/core-types';

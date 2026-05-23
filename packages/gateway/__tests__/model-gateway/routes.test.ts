@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
 import Fastify from 'fastify';
-import { modelGatewayRoutes } from '../../src/model-gateway/routes.js';
+import { modelGatewayRoutes, resetModelOrch } from '../../src/model-gateway/routes.js';
 import { initModelRouter } from '../../src/model-gateway/router.js';
 import type { ModelGatewayConfig } from '../../src/model-gateway/types.js';
 

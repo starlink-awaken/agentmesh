@@ -5,16 +5,49 @@ import { sseRoutes } from './routes/sse.js';
 import { modelGatewayRoutes } from './model-gateway/routes.js';
 import { initModelRouter } from './model-gateway/router.js';
 import { GatewayContainer, setGateway } from './core/gateway.js';
-import { loadConfig } from './core/config.js';
+import { loadAppConfig } from './core/config.js';
+import type { GatewayConfig } from './core/config.js';
+import { validateGatewayConfig } from '@agentmesh/core-types';
 import { circuitBreakerRegistry } from './model-gateway/circuit-breaker.js';
 import { configureRetry } from './model-gateway/retry.js';
 import { initRateLimiter } from './model-gateway/rate-limit.js';
-import { loadModelsConfig } from '@agentmesh/model-orchestrator';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 async function main() {
-  const config = loadConfig();
+  // 使用统一配置加载器，同时加载 gateway.yaml + models.yaml
+  const appConfig = loadAppConfig();
+  const config = appConfig.gateway as GatewayConfig;
+  const modelsCfg = appConfig.models;
+
+  // 运行时配置验证
+  const validation = validateGatewayConfig(appConfig);
+  if (!validation.valid) {
+    for (const err of validation.errors) {
+      console.error(`[Config] ERROR: ${err.path}: ${err.message}`);
+    }
+  }
+  for (const warn of validation.warnings) {
+    console.warn(`[Config] WARNING: ${warn.path}: ${warn.message}`);
+  }
+
+  // 构建 ModelGatewayConfig 合并到 gateway config
+  const cloudProviders: Record<string, { api_key_env?: string; base_url?: string }> = {};
+  for (const [name, cfg] of Object.entries(modelsCfg.cloud || {})) {
+    if (cfg?.enabled) {
+      cloudProviders[name] = { api_key_env: cfg.api_key_env, base_url: cfg.base_url };
+    }
+  }
+  const mergedModels: object = {
+    providers: cloudProviders,
+    fallback_chain: [],
+    model_routing: {},
+    defaults: {
+      circuit_breaker: modelsCfg.circuit_breaker,
+      retry: modelsCfg.retry,
+    },
+  };
+  (config as any).models = mergedModels;
 
   // 创建 DI 容器
   const gateway = new GatewayContainer(config);
@@ -51,20 +84,6 @@ async function main() {
   await fastify.register(modelGatewayRoutes);
   const { hermesRoutes } = await import('./hermes/routes.js');
   await fastify.register(hermesRoutes, { prefix: '/v1' });
-
-  // 从 models.yaml 读取 Provider 配置（覆盖 gateway.yaml 的 models 字段）
-  const modelsCfg = loadModelsConfig();
-  if (modelsCfg) {
-    const cloudProviders: Record<string, { api_key_env?: string; base_url?: string }> = {};
-    for (const [name, cfg] of Object.entries(modelsCfg.cloud || {})) {
-      if ((cfg as any)?.enabled) {
-        cloudProviders[name] = { api_key_env: (cfg as any)?.api_key_env, base_url: (cfg as any)?.base_url };
-      }
-    }
-    // 合并到 config.models.providers
-    if (!config.models) config.models = { providers: {}, fallback_chain: [], model_routing: {}, defaults: {} };
-    Object.assign(config.models.providers, cloudProviders);
-  }
 
   // 初始化模型网关
   const modelsConfig = config.models;

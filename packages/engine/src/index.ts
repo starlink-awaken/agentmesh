@@ -24,6 +24,11 @@ export { Logger, createLogger, logger } from './logger.js';
 export { ConfigLoader, createConfigLoader, DEFAULT_ENGINE_CONFIG } from './config-loader.js';
 export { DomainLoader, createDomainLoader } from './domain-loader.js';
 export {
+  DomainRegistry,
+  createDomainRegistry,
+  type DomainRegistryConfig,
+} from './domain-registry.js';
+export {
   validateDomainConfig,
   createSchemaValidator,
   DOMAIN_CONFIG_SCHEMA,

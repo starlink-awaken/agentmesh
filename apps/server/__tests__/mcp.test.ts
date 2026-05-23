@@ -143,12 +143,19 @@ describe('handleToolCall — models_chat', () => {
   });
 
   test('uses scheduler selection when model not specified', async () => {
-    const deps = createMockDeps();
-    const schedulerMock = deps.scheduler!;
+    const selectModel = mock(() => Promise.resolve({
+      model: { id: 'gpt-4', provider: 'openai', capabilities: ['chat'] } as any,
+      providerName: 'openai',
+      confidence: 0.95,
+      reasoning: 'Best available model',
+    }));
+    const deps = createMockDeps({
+      scheduler: { selectModel } as any,
+    });
     const { parsed } = await callTool('models_chat', { messages: chatMessages }, deps);
     expect(parsed.model).toBe('gpt-4');
     expect(parsed.content).toBe('Hello from mock');
-    expect(schedulerMock.selectModel).toHaveBeenCalled();
+    expect(selectModel).toHaveBeenCalledTimes(1);
   });
 
   test('returns info fallback when scheduler not connected', async () => {
@@ -167,7 +174,7 @@ describe('handleToolCall — models_chat', () => {
 
   test('returns error when registry.chat throws', async () => {
     const deps = createMockDeps({
-      registry: { chat: mock(() => Promise.reject(new Error('API rate limit exceeded'))) } as any,
+      registry: { chat: () => Promise.reject(new Error('API rate limit exceeded')) } as any,
     });
     const { parsed } = await callTool('models_chat', { model: 'gpt-4', messages: chatMessages }, deps);
     expect(parsed.error).toBe('API rate limit exceeded');
@@ -179,7 +186,7 @@ describe('handleToolCall — models_chat', () => {
 describe('handleToolCall — models_health', () => {
   test('returns alive status from discoverer', async () => {
     const deps = createMockDeps({
-      discoverer: { anyAlive: mock(() => Promise.resolve(true)) } as any,
+      discoverer: { anyAlive: () => Promise.resolve(true) } as any,
     });
     const { parsed } = await callTool('models_health', {}, deps);
     expect(parsed.local_models_alive).toBe(true);
@@ -193,7 +200,7 @@ describe('handleToolCall — models_health', () => {
 
   test('returns error when anyAlive throws', async () => {
     const deps = createMockDeps({
-      discoverer: { anyAlive: mock(() => Promise.reject(new Error('Discovery error'))) } as any,
+      discoverer: { anyAlive: () => Promise.reject(new Error('Discovery error')) } as any,
     });
     const { parsed } = await callTool('models_health', {}, deps);
     expect(parsed.error).toBe('Discovery error');
@@ -219,7 +226,7 @@ describe('handleToolCall — tasks_submit', () => {
 
   test('returns error when createTask throws', async () => {
     const deps = createMockDeps({
-      taskManager: { createTask: mock(() => Promise.reject(new Error('Store unavailable'))) } as any,
+      taskManager: { createTask: () => Promise.reject(new Error('Store unavailable')) } as any,
     });
     const { parsed } = await callTool('tasks_submit', { type: 'request', payload: {} }, deps);
     expect(parsed.error).toBe('Store unavailable');
@@ -253,7 +260,7 @@ describe('handleToolCall — tasks_status', () => {
 
   test('returns error when getTask throws', async () => {
     const deps = createMockDeps({
-      taskManager: { getTask: mock(() => { throw new Error('Internal error'); }) } as any,
+      taskManager: { getTask: () => { throw new Error('Internal error'); } } as any,
     });
     const { parsed } = await callTool('tasks_status', { taskId: 'task-1' }, deps);
     expect(parsed.error).toBe('Internal error');
@@ -285,7 +292,7 @@ describe('handleToolCall — tasks_list', () => {
 
   test('returns error when getAllTasks throws', async () => {
     const deps = createMockDeps({
-      taskManager: { getAllTasks: mock(() => { throw new Error('Load failed'); }) } as any,
+      taskManager: { getAllTasks: () => { throw new Error('Load failed'); } } as any,
     });
     const { parsed } = await callTool('tasks_list', {}, deps);
     expect(parsed.error).toBe('Load failed');
@@ -317,7 +324,7 @@ describe('handleToolCall — skills_list', () => {
 
   test('returns error when getAll throws', async () => {
     const deps = createMockDeps({
-      skillLoader: { getAll: mock(() => { throw new Error('Loader error'); }) } as any,
+      skillLoader: { getAll: () => { throw new Error('Loader error'); } } as any,
     });
     const { parsed } = await callTool('skills_list', {}, deps);
     expect(parsed.error).toBe('Loader error');
@@ -343,7 +350,7 @@ describe('handleToolCall — skills_search', () => {
 
   test('returns error when search throws', async () => {
     const deps = createMockDeps({
-      skillLoader: { search: mock(() => { throw new Error('Search failed'); }) } as any,
+      skillLoader: { search: () => { throw new Error('Search failed'); } } as any,
     });
     const { parsed } = await callTool('skills_search', { task: 'test' }, deps);
     expect(parsed.error).toBe('Search failed');
@@ -368,7 +375,7 @@ describe('handleToolCall — skills_execute', () => {
 
   test('returns error when execute throws', async () => {
     const deps = createMockDeps({
-      skillController: { execute: mock(() => Promise.reject(new Error('Execution denied'))) } as any,
+      skillController: { execute: () => Promise.reject(new Error('Execution denied')) } as any,
     });
     const { parsed } = await callTool('skills_execute', { skillId: 's1', input: {} }, deps);
     expect(parsed.error).toBe('Execution denied');
@@ -437,7 +444,7 @@ describe('handleToolCall — system_metrics', () => {
 
   test('returns error when snapshot throws', async () => {
     const deps = createMockDeps({
-      metricsCollector: { snapshot: mock(() => { throw new Error('Snapshot failed'); }) } as any,
+      metricsCollector: { snapshot: () => { throw new Error('Snapshot failed'); } } as any,
     });
     const { parsed } = await callTool('system_metrics', {}, deps);
     expect(parsed.error).toBe('Snapshot failed');

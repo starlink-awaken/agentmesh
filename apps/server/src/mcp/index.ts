@@ -17,10 +17,11 @@ import type { SkillLoader, SkillController } from '@agentmesh/toolkit';
 import { SkillLoader as GatewaySkillLoader, SkillController as GatewaySkillController } from '@agentmesh/toolkit';
 import type { MetricsCollector } from '@agentmesh/engine';
 import { MetricsCollector as EngineMetricsCollector } from '@agentmesh/engine';
+import type { MCPDependencyBridge } from '@agentmesh/core-types';
 
 // ── 依赖注入 ──
 
-export interface MCPServerDeps {
+export interface MCPServerDeps extends MCPDependencyBridge {
   discoverer?: LocalModelDiscoverer;
   registry?: ModelRegistry;
   scheduler?: ModelScheduler;
@@ -122,7 +123,8 @@ export async function handleToolCall(
       try {
         const models = await discoverer.discoverAll();
         const location = (args.location as string) || 'all';
-        return json({ total: models.length, models: location === 'all' ? models : models.filter(m => m.location === location) });
+        const filteredModels = location === 'all' ? models : models.filter(m => m.location === location);
+        return json({ total: filteredModels.length, models: filteredModels });
       } catch (err: any) { return json({ error: err.message }); }
     }
 
@@ -175,7 +177,8 @@ export async function handleToolCall(
       try {
         const status = args.status as string;
         const tasks = tm.getAllTasks();
-        return json({ total: tasks.length, tasks: status ? tasks.filter((t: any) => t.status === status) : tasks });
+        const filteredTasks = status ? tasks.filter((t: any) => t.status === status) : tasks;
+        return json({ total: filteredTasks.length, tasks: filteredTasks });
       } catch (err: any) { return json({ error: err.message }); }
     }
 
@@ -186,7 +189,8 @@ export async function handleToolCall(
       try {
         const skills = loader.getAll();
         const category = args.category as string;
-        return json({ total: skills.length, skills: category ? skills.filter((s: any) => s.category === category) : skills });
+        const filteredSkills = category ? skills.filter((s: any) => s.category === category) : skills;
+        return json({ total: filteredSkills.length, skills: filteredSkills });
       } catch (err: any) { return json({ error: err.message }); }
     }
 

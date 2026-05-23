@@ -1,6 +1,8 @@
 import { readFileSync, existsSync, watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'yaml';
+import type { ModelsConfig, AppConfig } from '@agentmesh/core-types';
+import { validateGatewayConfig } from '@agentmesh/core-types';
 import { OllamaProvider } from './providers/ollama.js';
 import { LMStudioProvider } from './providers/lm-studio.js';
 import { LlamaCppProvider } from './providers/llama-cpp.js';
@@ -11,42 +13,7 @@ import { ModelRegistry } from './registry.js';
 import { ModelScheduler } from './scheduler.js';
 import type { SchedulerConfig } from './types.js';
 
-// ── 配置接口 ──
-
-export interface ModelsConfig {
-  local: {
-    ollama?: { enabled: boolean; base_url?: string };
-    lm_studio?: { enabled: boolean; base_url?: string };
-    llama_cpp?: { enabled: boolean; instances?: { name: string; port: number; model_path?: string }[] };
-  };
-  cloud: {
-    openai?: { enabled: boolean; api_key_env?: string; base_url?: string };
-    anthropic?: { enabled: boolean; api_key_env?: string; base_url?: string };
-    openrouter?: { enabled: boolean; api_key_env?: string };
-  };
-  model_overrides?: {
-    id_prefix: string;
-    avg_latency_ms?: number;
-    cost_per_1k_input?: number;
-    cost_per_1k_output?: number;
-  }[];
-  circuit_breaker?: {
-    enabled?: boolean;
-    failure_threshold?: number;
-    reset_timeout_ms?: number;
-    half_open_max_requests?: number;
-  };
-  retry?: {
-    enabled?: boolean;
-    max_retries?: number;
-    base_delay_ms?: number;
-    max_delay_ms?: number;
-    retryable_statuses?: number[];
-  };
-  scheduler?: Partial<SchedulerConfig>;
-}
-
-// ── 文件搜索路径 ──
+// ── 配置搜索路径 ──
 
 function findConfigFile(): string {
   const candidates = [
@@ -90,6 +57,91 @@ function defaults(): ModelsConfig {
 
 export function getEnv(key: string): string {
   return process.env[key] || '';
+}
+
+// ── 统一配置加载 ──
+
+/**
+ * 从文件位置向上搜索 gateway.yaml
+ */
+function findGatewayConfigFile(): string {
+  const candidates = [
+    './config/gateway.yaml',
+    './config/gateway.yml',
+    resolve(process.cwd(), 'config/gateway.yaml'),
+    resolve(process.cwd(), 'config/gateway.yml'),
+    resolve(process.cwd(), '..', 'config', 'gateway.yaml'),
+    resolve(process.cwd(), '..', '..', 'config', 'gateway.yaml'),
+  ];
+  for (const path of candidates) {
+    if (existsSync(path)) return path;
+  }
+  return '';
+}
+
+/**
+ * 加载统一应用配置。
+ *
+ * 读取 config/models.yaml + config/gateway.yaml，
+ * 返回类型化的 AppConfig。
+ *
+ * 各包可解构获取所需节段：
+ * - gateway: `const { gateway, models } = loadAppConfig()`
+ * - model-orchestrator: `const appCfg = loadAppConfig(); appCfg.models`
+ */
+export function loadAppConfig(): AppConfig {
+  const gatewayCfgPath = findGatewayConfigFile();
+  const modelsCfgPath = findConfigFile();
+
+  // 从 config/ 目录读取 gateway.yaml
+  let gateway: import('@agentmesh/core-types').GatewayConfig;
+  if (gatewayCfgPath) {
+    const parsed = parse(readFileSync(gatewayCfgPath, 'utf-8')) as any;
+    const DEFAULTS = {
+      port: 3000, wsPort: 3001, host: '0.0.0.0',
+      dataDir: './data', logDir: './logs', logLevel: 'info',
+      routing: { defaultAgent: 'claude-code', rules: [] },
+      agents: [],
+    };
+    gateway = {
+      ...DEFAULTS,
+      ...parsed,
+      routing: {
+        ...DEFAULTS.routing,
+        ...(parsed.routing || {}),
+        rules: parsed.routing?.rules || [],
+      },
+    };
+  } else {
+    gateway = {
+      port: 3000, wsPort: 3001, host: '0.0.0.0',
+      dataDir: './data', logDir: './logs', logLevel: 'info',
+      routing: { defaultAgent: 'claude-code', rules: [] },
+      agents: [],
+    };
+    console.warn('[ConfigLoader] gateway.yaml not found, using defaults');
+  }
+
+  // 读取 models.yaml
+  const models = loadModelsConfig(modelsCfgPath);
+
+  // 运行时配置验证
+  const validation = validateGatewayConfig({ gateway, models });
+  if (!validation.valid) {
+    for (const err of validation.errors) {
+      console.error(`[Config] ERROR: ${err.path}: ${err.message}`);
+    }
+  }
+  for (const warn of validation.warnings) {
+    console.warn(`[Config] WARNING: ${warn.path}: ${warn.message}`);
+  }
+
+  return { gateway, models };
+}
+
+/** 重新加载配置（清除内部缓存后重新加载） */
+export function reloadAppConfig(): AppConfig {
+  return loadAppConfig();
 }
 
 // ── 配置 → 初始化 ──

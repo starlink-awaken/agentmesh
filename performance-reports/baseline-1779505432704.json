@@ -1,0 +1,17 @@
+{
+  "name": "dsl-compiler-baseline",
+  "version": "1.0.0",
+  "timestamp": 1779505432704,
+  "environment": {
+    "platform": "darwin",
+    "nodeVersion": "v24.3.0",
+    "cpuModel": "unknown"
+  },
+  "metrics": {
+    "lexerThroughput": 7442.166298476093,
+    "parserThroughput": 23384.615373307253,
+    "typeCheckTime": 0.016708000002836343,
+    "codeGenThroughput": 1459.8540147275528,
+    "totalCompileTime": 0.06891600000017206
+  }
+}

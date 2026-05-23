@@ -15,6 +15,11 @@ function getModelOrch() {
   return _modelOrch;
 }
 
+/** 重置模型编排单例（用于测试隔离） */
+export function resetModelOrch(): void {
+  _modelOrch = null;
+}
+
 /**
  * model-gateway routes — 旧模型网关路由。
  * 即将被 model-orchestrator 取代，新功能请见 packages/model-orchestrator/。

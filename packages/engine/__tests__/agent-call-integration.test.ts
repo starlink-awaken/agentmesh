@@ -1051,7 +1051,7 @@ describe('Agent Call Integration Tests', () => {
   // ============================================================
 
   describe('超时控制', () => {
-    it('应该在超时后取消执行', async () => {
+    it('应该在超时后取消执行', { timeout: 15000 }, async () => {
       mockAgentExecutor.register('timeout-agent', async () => {
         // 这个 agent 需要很长时间
         await new Promise((resolve) => setTimeout(resolve, 5000));

@@ -31,3 +31,35 @@ export type {
   CoreEventType,
   CoreEvent,
 } from './events.js';
+
+export type {
+  ModelOrchestratorBridge,
+  ToolkitBridge,
+  MCPDependencyBridge,
+} from './bridges.js';
+
+// ── 配置类型 ──
+
+export type {
+  GatewayConfig,
+  ModelsConfig,
+  AppConfig,
+  AgentConfig,
+  RoutingRule,
+  ModelCloudProviderConfig,
+  ModelsCircuitBreaker,
+  ModelsRetry,
+  ModelsScheduler,
+} from './config.js';
+
+// ── 配置验证 ──
+
+export {
+  validateGatewayConfig,
+} from './config-validator.js';
+
+export type {
+  ConfigValidation,
+  ConfigValidationError,
+  ConfigValidationWarning,
+} from './config-validator.js';

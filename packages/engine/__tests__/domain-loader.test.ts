@@ -386,7 +386,7 @@ describe('DomainLoader', () => {
       }).toThrow('Domain config missing required field: archetype');
     });
 
-    test('throws error for missing version field', () => {
+    test('defaults version to 1.0.0 when not specified', () => {
       const domainDir = join(tempDir, 'software');
       mkdirSync(domainDir, { recursive: true });
 
@@ -398,9 +398,8 @@ describe('DomainLoader', () => {
 
       writeFileSync(join(domainDir, 'domain.json'), JSON.stringify(config));
 
-      expect(() => {
-        loader.loadDomain('software-dev');
-      }).toThrow('Domain config missing required field: version');
+      const loaded = loader.loadDomain('software-dev');
+      expect(loaded.version).toBe('1.0.0');
     });
   });
 
@@ -1166,7 +1165,9 @@ capabilities: []
       expect(loaded.name).toBe('Minimal');
       expect(loaded.phase_prompts).toEqual({});
       expect(loaded.agent_overrides).toEqual({});
-      expect(loaded.defaults).toEqual({});
+      expect(loaded.defaults.complexity).toBe('standard');
+      expect(loaded.defaults.token_budget).toBe(100000);
+      expect(loaded.defaults.max_concurrent_agents).toBe(3);
       expect(loaded.templates).toEqual({});
       expect(loaded.quality_gates).toEqual([]);
     });
@@ -1191,7 +1192,9 @@ capabilities: []
       const loaded = loader.loadDomain('software-dev');
       expect(loaded.phase_prompts).toEqual({});
       expect(loaded.agent_overrides).toEqual({});
-      expect(loaded.defaults).toEqual({});
+      expect(loaded.defaults.complexity).toBe('standard');
+      expect(loaded.defaults.token_budget).toBe(100000);
+      expect(loaded.defaults.max_concurrent_agents).toBe(3);
       expect(loaded.templates).toEqual({});
       expect(loaded.quality_gates).toEqual([]);
     });

@@ -2,7 +2,6 @@
   "name": "data-science",
   "description": "Data science domain - data analysis, machine learning, statistical modeling, data visualization, predictive analytics.",
   "archetype": "data-science",
-  "version": "1.0.0",
   "phase_prompts": {
     "research": "Research data sources, quality issues, statistical requirements.",
     "decision": "Define analytical approach, select models and methods.",
@@ -15,7 +14,6 @@
     "ml-engineer": { "enabled": true, "priority": 10 }
   },
   "defaults": {
-    "complexity": "standard",
     "token_budget": 400000,
     "max_concurrent_agents": 6
   },

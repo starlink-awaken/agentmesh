@@ -2,7 +2,6 @@
   "name": "visual-production",
   "description": "Visual production domain - comics, animation, video production, storyboard design, visual effects, and post-production across all media formats",
   "archetype": "visual-production",
-  "version": "1.0.0",
   "phase_prompts": {
     "research": "Research visual style references, target audience demographics, platform specifications.",
     "decision": "Define visual style guide, choose art direction, establish color palette.",
@@ -17,7 +16,6 @@
     "designer": { "enabled": true, "priority": 8 }
   },
   "defaults": {
-    "complexity": "standard",
     "token_budget": 350000,
     "max_concurrent_agents": 8
   },

@@ -31,6 +31,7 @@ import type {
 } from './types.js';
 import { AgentRunner } from './agent-runner.js';
 import { validateDomainConfig, type ValidationResult } from './domain-schema.js';
+import { DomainRegistry, createDomainRegistry } from './domain-registry.js';
 
 // ============================================================
 // Constants
@@ -52,13 +53,16 @@ const ARCHETYPE_TO_DIR: Record<ProjectArchetype, string | null> = {
 
 export class DomainLoader {
   private domainsRoot: string;
+  private registry: DomainRegistry;
 
   /**
    * Create a new DomainLoader instance.
    * @param domainsRoot - Absolute path to the domains root directory
+   * @param registry - Optional DomainRegistry for default values
    */
-  constructor(domainsRoot: string) {
+  constructor(domainsRoot: string, registry?: DomainRegistry) {
     this.domainsRoot = path.resolve(domainsRoot);
+    this.registry = registry ?? createDomainRegistry();
   }
 
   /**
@@ -91,7 +95,9 @@ export class DomainLoader {
     try {
       const raw = fs.readFileSync(configPath, 'utf-8');
       const parsed = JSON.parse(raw);
-      return this.validateDomainConfig(parsed);
+      // Apply registry defaults to fill in missing fields before validation
+      const merged = this.applyRegistryDefaults(parsed);
+      return this.validateDomainConfig(merged);
     } catch (err) {
       if (err instanceof SyntaxError) {
         throw new Error(`Invalid JSON in domain config: ${configPath} - ${err.message}`);
@@ -331,8 +337,52 @@ export class DomainLoader {
   }
 
   /**
-   * Recursively find all markdown files in a directory.
+   * Apply registry defaults to a parsed domain config.
+   * Fills in missing optional fields with sensible defaults
+   * while preserving user-provided values.
+   *
+   * Required fields (name, description, archetype) are passed through
+   * as empty strings if missing — existing validation catches them.
    */
+  private applyRegistryDefaults(config: unknown): Record<string, unknown> {
+    if (config === null || typeof config !== 'object' || Array.isArray(config)) {
+      // Pass non-objects through — validation will catch them
+      return config as Record<string, unknown>;
+    }
+
+    const obj = config as Record<string, unknown>;
+    const name = typeof obj.name === 'string' ? obj.name : '';
+    const description = typeof obj.description === 'string' ? obj.description : '';
+    const archetype = typeof obj.archetype === 'string'
+      ? obj.archetype as ProjectArchetype
+      : ('' as ProjectArchetype);
+
+    const effective = this.registry.getEffectiveConfig({
+      name,
+      description,
+      archetype,
+      version: typeof obj.version === 'string' ? obj.version : undefined,
+      phase_prompts: typeof obj.phase_prompts === 'object' && obj.phase_prompts !== null && !Array.isArray(obj.phase_prompts)
+        ? obj.phase_prompts as Partial<Record<Phase, string>>
+        : undefined,
+      agent_overrides: typeof obj.agent_overrides === 'object' && obj.agent_overrides !== null && !Array.isArray(obj.agent_overrides)
+        ? obj.agent_overrides as Record<string, import('./types.js').AgentOverride>
+        : undefined,
+      defaults: typeof obj.defaults === 'object' && obj.defaults !== null && !Array.isArray(obj.defaults)
+        ? obj.defaults as import('./types.js').DomainDefaults
+        : undefined,
+      templates: typeof obj.templates === 'object' && obj.templates !== null && !Array.isArray(obj.templates)
+        ? obj.templates as Record<string, string>
+        : undefined,
+      quality_gates: Array.isArray(obj.quality_gates)
+        ? obj.quality_gates as QualityGate[]
+        : undefined,
+    });
+
+    // Return as Record<string, unknown> for validateDomainConfig compatibility
+    return effective as unknown as Record<string, unknown>;
+  }
+
   private findMarkdownFiles(dir: string): string[] {
     const results: string[] = [];
 
@@ -633,8 +683,9 @@ export class DomainLoader {
  * Create a new DomainLoader instance.
  *
  * @param domainsRoot - Absolute path to the domains root directory
+ * @param registry - Optional DomainRegistry for default values
  * @returns New DomainLoader instance
  */
-export function createDomainLoader(domainsRoot: string): DomainLoader {
-  return new DomainLoader(domainsRoot);
+export function createDomainLoader(domainsRoot: string, registry?: DomainRegistry): DomainLoader {
+  return new DomainLoader(domainsRoot, registry);
 }

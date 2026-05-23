@@ -1,0 +1,281 @@
+{
+  "test": "full-compilation",
+  "timestamp": 1779453462434,
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v24.3.0",
+    "cpuCount": 18,
+    "totalMemory": "86MB",
+    "timestamp": "2026-05-22T12:37:42.434Z"
+  },
+  "summary": {
+    "totalSamples": 10,
+    "avgTotalTime": 0.09758300000066811,
+    "avgLexerThroughput": 6282.7898764090605,
+    "avgParserThroughput": 21334.81084126456,
+    "avgCodeGenThroughput": 1154.41734614516
+  },
+  "results": [
+    {
+      "sample": "simple-agent",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 81,
+          "timeMs": 0.01508300000205054,
+          "throughput": 5370.284425445072
+        },
+        "parser": {
+          "nodeCount": 7,
+          "timeMs": 0.0008749999979045242,
+          "throughput": 7000
+        },
+        "typeChecker": {
+          "timeMs": 0.01470799999879091,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 20,
+          "timeMs": 0.006874999999126885,
+          "throughput": 2909.0909094603594
+        },
+        "totalTime": 0.03754099999787286,
+        "sourceSize": 546
+      }
+    },
+    {
+      "sample": "data-processor",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 249,
+          "timeMs": 0.03879099999903701,
+          "throughput": 6419.01472006861
+        },
+        "parser": {
+          "nodeCount": 38,
+          "timeMs": 0.001374999999825377,
+          "throughput": 27636.363639873412
+        },
+        "typeChecker": {
+          "timeMs": 0.020832999998674495,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 25,
+          "timeMs": 0.01937499999985448,
+          "throughput": 1290.3225806548526
+        },
+        "totalTime": 0.08037399999739137,
+        "sourceSize": 1709
+      }
+    },
+    {
+      "sample": "enterprise-workflow",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 563,
+          "timeMs": 0.08266699999876437,
+          "throughput": 6810.456409551758
+        },
+        "parser": {
+          "nodeCount": 106,
+          "timeMs": 0.002917000001616543,
+          "throughput": 36338.70412795918
+        },
+        "typeChecker": {
+          "timeMs": 0.05129099999976461,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 27,
+          "timeMs": 0.045042000001558335,
+          "throughput": 599.4405221585603
+        },
+        "totalTime": 0.18191700000170385,
+        "sourceSize": 4064
+      }
+    },
+    {
+      "sample": "multi-domain-orchestrator",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 624,
+          "timeMs": 0.08020799999940209,
+          "throughput": 7779.772591320711
+        },
+        "parser": {
+          "nodeCount": 81,
+          "timeMs": 0.002749999999650754,
+          "throughput": 29454.54545828614
+        },
+        "typeChecker": {
+          "timeMs": 0.03262499999982538,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 37,
+          "timeMs": 0.03395799999998417,
+          "throughput": 1089.5812474237955
+        },
+        "totalTime": 0.1495409999988624,
+        "sourceSize": 4100
+      }
+    },
+    {
+      "sample": "minimal-agent",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 75,
+          "timeMs": 0.009791000000404892,
+          "throughput": 7660.096006219843
+        },
+        "parser": {
+          "nodeCount": 7,
+          "timeMs": 0.0007920000025478657,
+          "throughput": 7000
+        },
+        "typeChecker": {
+          "timeMs": 0.0057500000002619345,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 20,
+          "timeMs": 0.005124999999679858,
+          "throughput": 3902.4390246340167
+        },
+        "totalTime": 0.02145800000289455,
+        "sourceSize": 427
+      }
+    },
+    {
+      "sample": "transform-agent",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 218,
+          "timeMs": 0.03800000000046566,
+          "throughput": 5736.842105192857
+        },
+        "parser": {
+          "nodeCount": 33,
+          "timeMs": 0.001291000000492204,
+          "throughput": 25561.58016066498
+        },
+        "typeChecker": {
+          "timeMs": 0.013915999999881024,
+          "errorCount": 1
+        },
+        "codeGenerator": {
+          "linesOfCode": 0,
+          "timeMs": 0.012708999998721993,
+          "throughput": 0
+        },
+        "totalTime": 0.06591599999956088,
+        "sourceSize": 1407
+      }
+    },
+    {
+      "sample": "parallel-processor",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 276,
+          "timeMs": 0.035166000001481734,
+          "throughput": 7848.490018437429
+        },
+        "parser": {
+          "nodeCount": 41,
+          "timeMs": 0.001291999997192761,
+          "throughput": 31733.74619898159
+        },
+        "typeChecker": {
+          "timeMs": 0.028500000000349246,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 23,
+          "timeMs": 0.01900000000023283,
+          "throughput": 1210.5263157746397
+        },
+        "totalTime": 0.08395799999925657,
+        "sourceSize": 1795
+      }
+    },
+    {
+      "sample": "conditional-router",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 266,
+          "timeMs": 0.03912499999933061,
+          "throughput": 6798.722044844753
+        },
+        "parser": {
+          "nodeCount": 46,
+          "timeMs": 0.0016250000007858034,
+          "throughput": 28307.69229400352
+        },
+        "typeChecker": {
+          "timeMs": 0.021292000001267297,
+          "errorCount": 1
+        },
+        "codeGenerator": {
+          "linesOfCode": 0,
+          "timeMs": 0.015416000002005603,
+          "throughput": 0
+        },
+        "totalTime": 0.07745800000338932,
+        "sourceSize": 1812
+      }
+    },
+    {
+      "sample": "batch-processor",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 240,
+          "timeMs": 0.06166700000176206,
+          "throughput": 3891.8708546409307
+        },
+        "parser": {
+          "nodeCount": 38,
+          "timeMs": 0.0032079999982670415,
+          "throughput": 11845.386540064701
+        },
+        "typeChecker": {
+          "timeMs": 0.024958000001788605,
+          "errorCount": 0
+        },
+        "codeGenerator": {
+          "linesOfCode": 23,
+          "timeMs": 0.04237500000090222,
+          "throughput": 542.7728613453758
+        },
+        "totalTime": 0.13220800000271993,
+        "sourceSize": 1629
+      }
+    },
+    {
+      "sample": "resilient-processor",
+      "metrics": {
+        "lexer": {
+          "tokenCount": 342,
+          "timeMs": 0.07579199999963748,
+          "throughput": 4512.349588368638
+        },
+        "parser": {
+          "nodeCount": 48,
+          "timeMs": 0.005667000001267297,
+          "throughput": 8470.089992812049
+        },
+        "typeChecker": {
+          "timeMs": 0.039832999998907326,
+          "errorCount": 1
+        },
+        "codeGenerator": {
+          "linesOfCode": 0,
+          "timeMs": 0.024167000003217254,
+          "throughput": 0
+        },
+        "totalTime": 0.14545900000302936,
+        "sourceSize": 2591
+      }
+    }
+  ]
+}

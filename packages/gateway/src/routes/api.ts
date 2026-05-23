@@ -12,6 +12,7 @@ import { SkillLoader, SkillController } from '@agentmesh/toolkit';
 import type { SkillExecutionContext } from '@agentmesh/toolkit';
 import { HoneycombOrchestrator } from '@agentmesh/engine';
 import type { ProjectConfig } from '@agentmesh/engine';
+import type { ModelOrchestratorBridge, ToolkitBridge } from '@agentmesh/core-types';
 
 // 启动时缓存编排实例（避免每次请求都重复初始化）
 let _modelOrch: ReturnType<typeof initFromConfig> | null = null;
@@ -321,7 +322,9 @@ export async function apiRoutes(fastify: FastifyInstance) {
     try {
       const { registry } = getModelOrch();
       await registry.refresh();
-      reply.send({ total: registry.getAll().length, models: registry.getAll() });
+      // ModelOrchestratorBridge contract: getModels()
+      const models: Awaited<ReturnType<ModelOrchestratorBridge['getModels']>> = registry.getAll();
+      reply.send({ total: models.length, models });
     } catch (err) {
       reply.code(502).send({ error: { code: 'MODEL_ORCH_FAILED', message: String(err) } });
     }
@@ -342,7 +345,8 @@ export async function apiRoutes(fastify: FastifyInstance) {
         selection = await scheduler.selectModel({ task: messages[0]?.content || '', requiredCapabilities: ['chat'] });
       }
       if (!selection) return reply.code(503).send({ error: { code: 'NO_MODEL_AVAILABLE' } });
-      const result = await registry.chat(selection.model.id, messages);
+      // ModelOrchestratorBridge contract: chat()
+      const result: Awaited<ReturnType<ModelOrchestratorBridge['chat']>> = await registry.chat(selection.model.id, messages);
       reply.send({ model: selection.model.id, content: result?.content });
     } catch (err) {
       reply.code(502).send({ error: { code: 'CHAT_FAILED', message: String(err) } });
@@ -404,7 +408,8 @@ export async function apiRoutes(fastify: FastifyInstance) {
         retrievedMemories: [],
         selectedSkills: [],
       };
-      const result = await controller.execute(ctx);
+      // ToolkitBridge contract: executeSkill()
+      const result: Awaited<ReturnType<ToolkitBridge['executeSkill']>> = await controller.execute(ctx);
       reply.send({ skillId, result });
     } catch (err) {
       reply.code(502).send({ error: { code: 'SKILL_EXEC_FAILED', message: String(err) } });

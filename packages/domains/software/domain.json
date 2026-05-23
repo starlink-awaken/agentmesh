@@ -2,7 +2,6 @@
   "name": "Software Development",
   "description": "Software development domain with CI/CD and code review covering full-stack development, testing, deployment, and maintenance.",
   "archetype": "software-dev",
-  "version": "1.0.0",
   "phase_prompts": {
     "research": "Research technical requirements, existing solutions, libraries, and architecture patterns.",
     "decision": "Define technical architecture, choose tech stack, establish coding standards.",
@@ -16,7 +15,6 @@
     "architect": { "enabled": true, "priority": 10 }
   },
   "defaults": {
-    "complexity": "standard",
     "token_budget": 100000,
     "max_concurrent_agents": 3
   },

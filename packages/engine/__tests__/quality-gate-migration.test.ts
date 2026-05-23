@@ -7,12 +7,17 @@
  */
 
 import { describe, it, expect } from 'bun:test';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import { DomainLoader } from '../src/domain-loader.js';
 import type { QualityGateCriterion } from '../src/types.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const domainsDir = resolve(__dirname, '../../domains');
+
 describe('Quality Gate ISC Migration', () => {
   it('should auto-convert pass_condition to expression', async () => {
-    const loader = new DomainLoader('../domains');  // ← 修复路径：tests/ → 根目录的 domains/
+    const loader = new DomainLoader(domainsDir);
 
     // 加载 software 域（包含旧格式质量门禁）
     const domain = loader.loadDomain('software-dev');
@@ -55,7 +60,7 @@ describe('Quality Gate ISC Migration', () => {
   });
 
   it('should extract variables from expression', async () => {
-    const loader = new DomainLoader('../domains');  // ← 修复路径
+    const loader = new DomainLoader(domainsDir);
 
     // 加载 software 域
     const domain = loader.loadDomain('software-dev');
@@ -72,7 +77,7 @@ describe('Quality Gate ISC Migration', () => {
   });
 
   it('should support mixed format (both pass_condition and expression)', async () => {
-    const loader = new DomainLoader('./domains');
+    const loader = new DomainLoader(domainsDir);
 
     // 模拟混合格式的质量门禁配置
     const mixedConfig = {
@@ -136,7 +141,7 @@ describe('Quality Gate ISC Migration', () => {
 
   it('should filter out keywords from extracted variables', () => {
     // 直接测试 extractVariables 方法（通过访问私有方法的副作用）
-    const loader = new DomainLoader('../domains');  // ← 修复路径
+    const loader = new DomainLoader(domainsDir);
 
     // 加载一个包含关键字的表达式
     const config = {
