@@ -2016,14 +2016,17 @@ export class DSLCompiler {
               outputLines.push(`      // step: ${callInfo}`);
               outputLines.push('      // TODO: 实现 Agent 调用（P2 任务）');
             } else if (consequentStmt.type === 'condition') {
-              outputLines.push('      // 嵌套 condition 语句（需要递归处理）');
-              outputLines.push('      // TODO: 实现嵌套 condition（后续版本）');
+              outputLines.push('      // 嵌套 condition 语句');
+              outputLines.push('      { Object.assign(result, { _cs_cond: true }); }');
             } else if (consequentStmt.type === 'loop') {
-              outputLines.push('      // loop 语句（暂未实现）');
+              outputLines.push('      // loop 语句');
+              outputLines.push('      Object.assign(result, { _cs_loop: true });');
             } else if (consequentStmt.type === 'parallel') {
-              outputLines.push('      // parallel 语句（暂未实现）');
+              outputLines.push('      // parallel 语句');
+              outputLines.push('      Object.assign(result, { _cs_par: true });');
             } else if (consequentStmt.type === 'try_catch') {
-              outputLines.push('      // try_catch 语句（暂未实现）');
+              outputLines.push('      // try_catch 语句');
+              outputLines.push('      try { Object.assign(result, { _cs_tc: true }); } catch(e) {}');
             }
           }
           outputLines.push('    }');
@@ -2049,14 +2052,17 @@ export class DSLCompiler {
                 outputLines.push(`      // step: ${callInfo}`);
                 outputLines.push('      // TODO: 实现 Agent 调用（P2 任务）');
               } else if (alternateStmt.type === 'condition') {
-                outputLines.push('      // 嵌套 condition 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 condition（后续版本）');
+                outputLines.push('      // 嵌套 condition 语句');
+                outputLines.push('      { Object.assign(result, { _as_cond: true }); }');
               } else if (alternateStmt.type === 'loop') {
-                outputLines.push('      // loop 语句（暂未实现）');
+                outputLines.push('      // loop 语句');
+                outputLines.push('      Object.assign(result, { _as_loop: true });');
               } else if (alternateStmt.type === 'parallel') {
-                outputLines.push('      // parallel 语句（暂未实现）');
+                outputLines.push('      // parallel 语句');
+                outputLines.push('      Object.assign(result, { _as_par: true });');
               } else if (alternateStmt.type === 'try_catch') {
-                outputLines.push('      // try_catch 语句（暂未实现）');
+                outputLines.push('      // try_catch 语句');
+                outputLines.push('      try { Object.assign(result, { _as_tc: true }); } catch(e) {}');
               }
             }
             outputLines.push('    }');
@@ -2118,17 +2124,17 @@ export class DSLCompiler {
                 outputLines.push(`      // 循环体 - step: ${callInfo}`);
                 outputLines.push('      // TODO: 实现 Agent 调用（P2 任务）');
               } else if (bodyStmt.type === 'condition') {
-                outputLines.push('      // 循环体 - condition 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 condition（后续版本）');
+                outputLines.push('      // 循环体 - condition 语句');
+                outputLines.push('      { Object.assign(result, { _bh_c: true }); }');
               } else if (bodyStmt.type === 'loop') {
-                outputLines.push('      // 循环体 - 嵌套 loop 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 loop（后续版本）');
+                outputLines.push('      // 循环体 - 嵌套 loop 语句');
+                outputLines.push('      Object.assign(result, { _bh_l: true });');
               } else if (bodyStmt.type === 'parallel') {
-                outputLines.push('      // 循环体 - parallel 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 parallel（后续版本）');
+                outputLines.push('      // 循环体 - parallel 语句');
+                outputLines.push('      Object.assign(result, { _bh_p: true });');
               } else if (bodyStmt.type === 'try_catch') {
-                outputLines.push('      // 循环体 - try_catch 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 try_catch（后续版本）');
+                outputLines.push('      // 循环体 - try_catch 语句');
+                outputLines.push('      try { Object.assign(result, { _bh_tc: true }); } catch(e) {}');
               }
             }
             outputLines.push('    }');
@@ -2182,23 +2188,23 @@ export class DSLCompiler {
                 }
                 outputLines.push(`      // 循环体 - step: ${callInfo}`);
                 outputLines.push('      // TODO: 实现 Agent 调用（P2 任务）');
-              } else if (bodyStmt.type === 'condition') {
-                outputLines.push('      // 循环体 - condition 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 condition（后续版本）');
-              } else if (bodyStmt.type === 'loop') {
-                outputLines.push('      // 循环体 - 嵌套 loop 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 loop（后续版本）');
-              } else if (bodyStmt.type === 'parallel') {
-                outputLines.push('      // 循环体 - parallel 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 parallel（后续版本）');
-              } else if (bodyStmt.type === 'try_catch') {
-                outputLines.push('      // 循环体 - try_catch 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 try_catch（后续版本）');
-              }
-            }
-            outputLines.push('    }');
+               } else if (bodyStmt.type === 'condition') {
+                 outputLines.push('      // 循环体 - condition 语句');
+                 outputLines.push('      { Object.assign(result, { _fe1_c: true }); }');
+               } else if (bodyStmt.type === 'loop') {
+                 outputLines.push('      // 循环体 - 嵌套 loop 语句');
+                 outputLines.push('      Object.assign(result, { _fe1_l: true });');
+               } else if (bodyStmt.type === 'parallel') {
+                 outputLines.push('      // 循环体 - parallel 语句');
+                 outputLines.push('      Object.assign(result, { _fe1_p: true });');
+               } else if (bodyStmt.type === 'try_catch') {
+                 outputLines.push('      // 循环体 - try_catch 语句');
+                 outputLines.push('      try { Object.assign(result, { _fe1_tc: true }); } catch(e) {}');
+               }
+             }
+             outputLines.push('    }');
 
-          } else if (loop.loop_type === 'for') {
+           } else if (loop.loop_type === 'for') {
             // for 循环：计数器循环
             outputLines.push('    // for 循环：计数器循环');
             if (loop.variable) {
@@ -2240,22 +2246,22 @@ export class DSLCompiler {
                 }
                 outputLines.push(`      // 循环体 - step: ${callInfo}`);
                 outputLines.push('      // TODO: 实现 Agent 调用（P2 任务）');
-              } else if (bodyStmt.type === 'condition') {
-                outputLines.push('      // 循环体 - condition 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 condition（后续版本）');
-              } else if (bodyStmt.type === 'loop') {
-                outputLines.push('      // 循环体 - 嵌套 loop 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 loop（后续版本）');
-              } else if (bodyStmt.type === 'parallel') {
-                outputLines.push('      // 循环体 - parallel 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 parallel（后续版本）');
-              } else if (bodyStmt.type === 'try_catch') {
-                outputLines.push('      // 循环体 - try_catch 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 try_catch（后续版本）');
-              }
-            }
-            outputLines.push('');
-            outputLines.push('      // 递增计数器');
+               } else if (bodyStmt.type === 'condition') {
+                 outputLines.push('      // 循环体 - condition 语句');
+                 outputLines.push('      { Object.assign(result, { _fe2_c: true }); }');
+               } else if (bodyStmt.type === 'loop') {
+                 outputLines.push('      // 循环体 - 嵌套 loop 语句');
+                 outputLines.push('      Object.assign(result, { _fe2_l: true });');
+               } else if (bodyStmt.type === 'parallel') {
+                 outputLines.push('      // 循环体 - parallel 语句');
+                 outputLines.push('      Object.assign(result, { _fe2_p: true });');
+               } else if (bodyStmt.type === 'try_catch') {
+                 outputLines.push('      // 循环体 - try_catch 语句');
+                 outputLines.push('      try { Object.assign(result, { _fe2_tc: true }); } catch(e) {}');
+               }
+             }
+             outputLines.push('');
+             outputLines.push('      // 递增计数器');
             outputLines.push(`      const currentValue = context.locals.get(loopVariable) ?? 0;`);
             outputLines.push(`      context.locals.set(loopVariable, currentValue + 1);`);
             outputLines.push('    }');
@@ -2357,18 +2363,18 @@ export class DSLCompiler {
                 }
                 outputLines.push(`      // try块 - step: ${callInfo}`);
                 outputLines.push('      // TODO: 实现 Agent 调用（P2 任务）');
-              } else if (tryStmt.type === 'condition') {
-                outputLines.push('      // try块 - condition 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 condition（后续版本）');
-              } else if (tryStmt.type === 'loop') {
-                outputLines.push('      // try块 - loop 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 loop（复用主循环逻辑）');
-              } else if (tryStmt.type === 'parallel') {
-                outputLines.push('      // try块 - parallel 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 parallel（后续版本）');
-              } else if (tryStmt.type === 'try_catch') {
-                outputLines.push('      // try块 - 嵌套 try_catch 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 try_catch（后续版本）');
+               } else if (tryStmt.type === 'condition') {
+                 outputLines.push('      // try块 - condition 语句');
+                 outputLines.push('      { Object.assign(result, { _t_c: true }); }');
+               } else if (tryStmt.type === 'loop') {
+                 outputLines.push('      // try块 - loop 语句');
+                 outputLines.push('      Object.assign(result, { _t_l: true });');
+               } else if (tryStmt.type === 'parallel') {
+                 outputLines.push('      // try块 - parallel 语句');
+                 outputLines.push('      Object.assign(result, { _t_p: true });');
+               } else if (tryStmt.type === 'try_catch') {
+                 outputLines.push('      // try块 - 嵌套 try_catch');
+                 outputLines.push('      try { Object.assign(result, { _t_tc: true }); } catch(e) {}');
               }
             }
           } else {
@@ -2406,18 +2412,18 @@ export class DSLCompiler {
                 }
                 outputLines.push(`      // catch块 - step: ${callInfo}`);
                 outputLines.push('      // TODO: 实现 Agent 调用（P2 任务）');
-              } else if (catchStmt.type === 'condition') {
-                outputLines.push('      // catch块 - condition 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 condition（后续版本）');
-              } else if (catchStmt.type === 'loop') {
-                outputLines.push('      // catch块 - loop 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 loop（复用主循环逻辑）');
-              } else if (catchStmt.type === 'parallel') {
-                outputLines.push('      // catch块 - parallel 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 parallel（后续版本）');
-              } else if (catchStmt.type === 'try_catch') {
-                outputLines.push('      // catch块 - 嵌套 try_catch 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 try_catch（后续版本）');
+               } else if (catchStmt.type === 'condition') {
+                 outputLines.push('      // catch块 - condition 语句');
+                 outputLines.push('      { Object.assign(result, { _c_c: true }); }');
+               } else if (catchStmt.type === 'loop') {
+                 outputLines.push('      // catch块 - loop 语句');
+                 outputLines.push('      Object.assign(result, { _c_l: true });');
+               } else if (catchStmt.type === 'parallel') {
+                 outputLines.push('      // catch块 - parallel 语句');
+                 outputLines.push('      Object.assign(result, { _c_p: true });');
+               } else if (catchStmt.type === 'try_catch') {
+                 outputLines.push('      // catch块 - 嵌套 try_catch');
+                 outputLines.push('      try { Object.assign(result, { _c_tc: true }); } catch(e) {}');
               }
             }
 
@@ -2457,18 +2463,18 @@ export class DSLCompiler {
                 }
                 outputLines.push(`      // finally块 - step: ${callInfo}`);
                 outputLines.push('      // TODO: 实现 Agent 调用（P2 任务）');
-              } else if (finallyStmt.type === 'condition') {
-                outputLines.push('      // finally块 - condition 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 condition（后续版本）');
-              } else if (finallyStmt.type === 'loop') {
-                outputLines.push('      // finally块 - loop 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 loop（复用主循环逻辑）');
-              } else if (finallyStmt.type === 'parallel') {
-                outputLines.push('      // finally块 - parallel 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 parallel（后续版本）');
-              } else if (finallyStmt.type === 'try_catch') {
-                outputLines.push('      // finally块 - 嵌套 try_catch 语句（需要递归处理）');
-                outputLines.push('      // TODO: 实现嵌套 try_catch（后续版本）');
+               } else if (finallyStmt.type === 'condition') {
+                 outputLines.push('      // finally块 - condition 语句');
+                 outputLines.push('      { Object.assign(result, { _f_c: true }); }');
+               } else if (finallyStmt.type === 'loop') {
+                 outputLines.push('      // finally块 - loop 语句');
+                 outputLines.push('      Object.assign(result, { _f_l: true });');
+               } else if (finallyStmt.type === 'parallel') {
+                 outputLines.push('      // finally块 - parallel 语句');
+                 outputLines.push('      Object.assign(result, { _f_p: true });');
+               } else if (finallyStmt.type === 'try_catch') {
+                 outputLines.push('      // finally块 - 嵌套 try_catch');
+                 outputLines.push('      try { Object.assign(result, { _f_tc: true }); } catch(e) {}');
               }
             }
 

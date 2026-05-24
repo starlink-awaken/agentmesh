@@ -1,5 +1,8 @@
+import './instrumentation.js';
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import { apiKeyAuth } from './middleware/api-key-auth.js';
 import { apiRoutes } from './routes/api.js';
 import { sseRoutes } from './routes/sse.js';
 import { modelGatewayRoutes } from './model-gateway/routes.js';
@@ -75,6 +78,9 @@ async function main() {
 
   // 注册 CORS
   await fastify.register(cors, { origin: true });
+
+  // 注册 API Key 认证 (可选, 由 API_KEY 环境变量控制)
+  fastify.addHook('onRequest', apiKeyAuth);
 
   // 注册路由
   const { dashboardRoutes } = await import('./routes/dashboard.js');
@@ -162,12 +168,35 @@ async function main() {
       });
     });
 
-    // 优雅停机
+    // 优雅停机（增强：等待活跃请求完成）
     const shutdown = async (signal: string) => {
       console.log(`\n[Gateway] Received ${signal}, shutting down gracefully...`);
+      
+      // 1. 停止接收新请求
       gateway.stopConfigWatcher();
+      
+      // 2. 等待活跃请求完成（最多 10s）
+      const startDrain = Date.now();
+      const maxDrainMs = 10000;
+      const activeRequests = (gateway as any).activeRequestCount?.() || 0;
+      
+      if (activeRequests > 0) {
+        console.log(`[Gateway] Draining ${activeRequests} active requests...`);
+        while ((gateway as any).activeRequestCount?.() > 0) {
+          if (Date.now() - startDrain > maxDrainMs) {
+            console.warn('[Gateway] Drain timeout, forcing shutdown');
+            break;
+          }
+          await new Promise(r => setTimeout(r, 100));
+        }
+      }
+      
+      // 3. 关闭 Fastify
       await fastify.close();
+      
+      // 4. 清理资源
       await gateway.dispose();
+      
       console.log('[Gateway] Shutdown complete');
       process.exit(0);
     };

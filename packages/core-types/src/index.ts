@@ -63,3 +63,17 @@ export type {
   ConfigValidationError,
   ConfigValidationWarning,
 } from './config-validator.js';
+
+// ── 统一 Tracing ──
+
+export type {
+  TraceContext,
+  Span,
+  SpanEvent,
+  TraceConfig,
+  TraceRecord,
+  TimeoutError,
+  createTraceContext,
+  createEntrySpan,
+  createInternalSpan,
+} from './tracing.js';

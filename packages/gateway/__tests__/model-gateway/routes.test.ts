@@ -29,6 +29,8 @@ describe('model gateway routes', () => {
   let fastify: ReturnType<typeof Fastify>;
 
   beforeAll(async () => {
+    // 重置单例，防止跨测试套件泄漏
+    resetModelOrch();
     initModelRouter(testConfig);
     fastify = Fastify({ logger: false });
     await fastify.register(modelGatewayRoutes);
@@ -44,10 +46,13 @@ describe('model gateway routes', () => {
     expect(Array.isArray(body.data)).toBe(true);
     expect(body.data.length).toBeGreaterThanOrEqual(1);
 
-    // 现在返回的是 model-orchestrator 真实发现的模型
-    // （测试环境通过 initModelRouter 注册的静态配置作为回退）
-    const modelIds = body.data.map((m: any) => m.id);
-    expect(modelIds.some((id: string) => id.includes('ollama/') || id.includes('deepseek') || id.includes('qwen'))).toBe(true);
+    // 验证每个模型对象有正确的结构（兼容 model-orchestrator 发现的任意本地模型）
+    for (const m of body.data) {
+      expect(typeof m.id).toBe('string');
+      expect(m.id.length).toBeGreaterThan(0);
+      expect(m.object).toBe('model');
+      expect(typeof m.owned_by).toBe('string');
+    }
   });
 
   // 这些端点依赖 codexbar（外部进程，15s+），单元测试 skip，集成测试单独运行

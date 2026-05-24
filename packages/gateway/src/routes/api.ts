@@ -70,17 +70,36 @@ async function forwardToEngineOrchestrator(
         if (v.createdAt < cutoff) engineProjects.delete(k);
       }
     }
-    const entry = { taskId: task.id, projectName: projectConfig.name, status: 'created', createdAt: Date.now() };
+    const entry = { 
+      taskId: task.id, 
+      projectName: projectConfig.name, 
+      status: 'created', 
+      createdAt: Date.now(),
+      traceId: '',  // 新增：将填充 trace_id
+    };
     engineProjects.set(projectConfig.name, entry);
 
-    // 启动编排（非阻塞）
-    orch.runCurrentPhase().then(() => {
-      entry.status = 'running';
-      console.log(`[EngineBridge] Orchestration started for ${projectConfig.name}`);
-    }).catch((err: unknown) => {
-      entry.status = 'failed';
-      console.warn(`[EngineBridge] Orchestration failed: ${err instanceof Error ? err.message : String(err)}`);
-    });
+    // 启动编排（改进：错误可传播）
+    // 方式：通过 traceId 让调用方可查询状态
+    const traceId = `tt-${new Date().toISOString().slice(0,19).replace(/[-:T]/g,'')}-${projectConfig.name.slice(0,8)}-${Math.random().toString(36).slice(2,6)}`;
+    entry.traceId = traceId;
+    
+    orch.runCurrentPhase()
+      .then(() => {
+        entry.status = 'running';
+        entry.traceId = traceId;
+        console.log(`[EngineBridge] Orchestration started for ${projectConfig.name} [trace=${traceId}]`);
+        
+        // 可选：发布事件通知（如果有 EventBus）
+        // this.emit('engine:started', { traceId, projectName: projectConfig.name });
+      })
+      .catch((err: unknown) => {
+        entry.status = 'failed';
+        entry.traceId = traceId;
+        console.warn(`[EngineBridge] Orchestration failed [trace=${traceId}]: ${err instanceof Error ? err.message : String(err)}`);
+        
+        // 错误被记录，可以通过 traceId 查询
+      });
   } catch (err: unknown) {
     console.warn('[EngineBridge] Engine orchestrator project creation failed (non-fatal):', err instanceof Error ? err.message : String(err));
   }

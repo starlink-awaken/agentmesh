@@ -9,6 +9,9 @@ export interface RetryConfig {
   baseDelayMs: number;
   maxDelayMs: number;
   retryableStatuses: number[];
+  // 新增：超时配置
+  callTimeoutMs?: number;
+  totalTimeoutMs?: number;
 }
 
 const DEFAULT_RETRY: RetryConfig = {
@@ -16,6 +19,8 @@ const DEFAULT_RETRY: RetryConfig = {
   baseDelayMs: 500,
   maxDelayMs: 10000,
   retryableStatuses: [429, 500, 502, 503, 504],
+  callTimeoutMs: 30000,   // 单次调用超时 30s
+  totalTimeoutMs: 120000,  // 总超时 120s
 };
 
 function isRetryable(status: number, retryableStatuses: number[]): boolean {
@@ -35,8 +40,9 @@ function backoff(attempt: number, config: RetryConfig): number {
 }
 
 /**
- * 带指数退避重试的 HTTP POST 调用。
+ * 带指数退避重试 + 超时的 HTTP POST 调用。
  * 仅重试可重试状态码（默认 429/5xx）和网络错误。
+ * 支持单次调用超时和总超时（新增）。
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
@@ -46,9 +52,24 @@ export async function withRetry<T>(
   const cfg = { ...DEFAULT_RETRY, ...config };
 
   let lastError: Error | null = null;
+  const startTime = Date.now();
 
   for (let attempt = 1; attempt <= cfg.maxRetries; attempt++) {
+    // 检查总超时
+    if (cfg.totalTimeoutMs && Date.now() - startTime >= cfg.totalTimeoutMs) {
+      throw new Error(`Total timeout exceeded: ${cfg.totalTimeoutMs}ms`);
+    }
+    
     try {
+      // 检查单次调用超时（如果配置了）
+      if (cfg.callTimeoutMs) {
+        return await Promise.race([
+          fn(),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error(`Call timeout: ${cfg.callTimeoutMs}ms`)), cfg.callTimeoutMs)
+          ),
+        ]);
+      }
       return await fn();
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));

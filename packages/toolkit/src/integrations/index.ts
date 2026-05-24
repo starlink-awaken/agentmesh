@@ -25,4 +25,10 @@ export type {
   MCPServerInfo as ServerInfo,
 } from './MCPServer.js';
 
+export { WorkspaceMCPClient } from './WorkspaceMCPClient.js';
+export type {
+  WorkspaceMCPService,
+  ConnectedMCPService,
+} from './WorkspaceMCPClient.js';
+
 export * from './mcp-tools.js';

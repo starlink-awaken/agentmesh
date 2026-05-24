@@ -145,6 +145,7 @@ export type {
 export {
   PublicAPIs,
   MCPServers,
+  WorkspaceMCPClient,
 } from './integrations/index.js';
 
 export type {
@@ -152,6 +153,8 @@ export type {
   SearchOptions,
   MCPServer,
   MCPCategory,
+  WorkspaceMCPService,
+  ConnectedMCPService,
 } from './integrations/index.js';
 
 // Skills 模块 - Progressive Disclosure 模式

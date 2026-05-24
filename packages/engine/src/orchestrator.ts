@@ -483,17 +483,17 @@ export class HoneycombOrchestrator {
       const phaseDuration = phaseTimer.stop();
       this.metricsCollector.increment('phases.completed', { phase: currentPhase });
 
+      // 新增：Phase 切换时自动 checkpoint (问题2修复)
+      if (this.config.auto_checkpoint) {
+        this.checkpoint(`Auto-checkpoint after phase: ${currentPhase}`);
+        this.metricsCollector.increment('checkpoints.created', { phase: currentPhase });
+      }
+
       this.emit(EngineEvent.PHASE_COMPLETED, {
         project_id: this.projectState.project_id,
         phase: currentPhase,
         duration_ms: phaseDuration,
       });
-
-      // Auto-checkpoint if configured
-      if (this.config.auto_checkpoint) {
-        this.checkpoint(`Auto-checkpoint after phase: ${currentPhase}`);
-        this.metricsCollector.increment('checkpoints.created', { phase: currentPhase });
-      }
 
       // Auto-advance to the next phase
       const nextPhase = this.stateMachine.getNextPhase();
