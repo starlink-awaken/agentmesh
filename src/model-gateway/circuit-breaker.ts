@@ -1,3 +1,5 @@
+import { logger } from '../core/logger.js';
+
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
 export interface CircuitBreakerConfig {
@@ -64,9 +66,13 @@ export class CircuitBreakerRegistry {
 
     if (entry.state === 'HALF_OPEN') {
       // Half-open success → reset to closed
+      logger.info('circuit breaker: HALF_OPEN → CLOSED (probe succeeded, circuit restored)', { provider });
       this.circuits.delete(provider);
     } else {
       // Reset failure count on success in closed state
+      if (entry.failures > 0) {
+        logger.info('circuit breaker: failure count reset', { provider, previous_failures: entry.failures });
+      }
       entry.failures = 0;
     }
   }
@@ -90,6 +96,7 @@ export class CircuitBreakerRegistry {
       entry.state = 'OPEN';
       entry.lastFailureTime = Date.now();
       entry.halfOpenCount = 0;
+      logger.warn('circuit breaker: HALF_OPEN → OPEN (probe failed)', { provider, reset_timeout_ms: cfg.resetTimeoutMs });
       return;
     }
 
@@ -98,6 +105,7 @@ export class CircuitBreakerRegistry {
 
     if (entry.failures >= cfg.failureThreshold) {
       entry.state = 'OPEN';
+      logger.warn('circuit breaker: CLOSED → OPEN', { provider, failures: entry.failures, threshold: cfg.failureThreshold, reset_timeout_ms: cfg.resetTimeoutMs });
     }
   }
 

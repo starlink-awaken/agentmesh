@@ -1,0 +1,94 @@
+{
+  "test": "lexer-performance",
+  "timestamp": 1779620953599,
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v24.3.0",
+    "cpuCount": 18,
+    "totalMemory": "65MB",
+    "timestamp": "2026-05-24T11:09:13.599Z"
+  },
+  "results": [
+    {
+      "sample": "simple-agent",
+      "result": {
+        "tokenCount": 81,
+        "timeMs": 0.0121875,
+        "throughput": 6646.153846153846
+      }
+    },
+    {
+      "sample": "minimal-agent",
+      "result": {
+        "tokenCount": 75,
+        "timeMs": 0.011245830000007118,
+        "throughput": 6669.138694071717
+      }
+    },
+    {
+      "sample": "data-processor",
+      "result": {
+        "tokenCount": 249,
+        "timeMs": 0.036649999999990544,
+        "throughput": 6793.997271488793
+      }
+    },
+    {
+      "sample": "transform-agent",
+      "result": {
+        "tokenCount": 218,
+        "timeMs": 0.03019749999999476,
+        "throughput": 7219.1406573404365
+      }
+    },
+    {
+      "sample": "conditional-router",
+      "result": {
+        "tokenCount": 266,
+        "timeMs": 0.03433665999998994,
+        "throughput": 7746.822201113269
+      }
+    },
+    {
+      "sample": "resilient-processor",
+      "result": {
+        "tokenCount": 342,
+        "timeMs": 0.038066670000007435,
+        "throughput": 8984.237391921415
+      }
+    },
+    {
+      "sample": "enterprise-workflow",
+      "result": {
+        "tokenCount": 563,
+        "timeMs": 0.06786916000000928,
+        "throughput": 8295.373038356789
+      }
+    },
+    {
+      "sample": "multi-domain-orchestrator",
+      "result": {
+        "tokenCount": 624,
+        "timeMs": 0.06468375000000379,
+        "throughput": 9646.936054263451
+      }
+    },
+    {
+      "sample": "parallel-processor",
+      "result": {
+        "tokenCount": 276,
+        "timeMs": 0.028930419999996956,
+        "throughput": 9540.131114585583
+      }
+    },
+    {
+      "sample": "batch-processor",
+      "result": {
+        "tokenCount": 240,
+        "timeMs": 0.026120420000006563,
+        "throughput": 9188.213665781013
+      }
+    }
+  ]
+}

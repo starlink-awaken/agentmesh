@@ -1,4 +1,5 @@
 import type { QuotaInfo } from './types.js';
+import { logger } from '../core/logger.js';
 
 let quotaCache: Map<string, QuotaInfo> = new Map();
 let lastProbeTime = 0;
@@ -29,10 +30,10 @@ export async function probeQuota(): Promise<Map<string, QuotaInfo>> {
         quotaCache.set(provider, info);
       }
       lastProbeTime = now;
-      console.log(`[Quota] Refreshed: ${quotaCache.size} providers`);
+      logger.info('quota_refreshed', { providerCount: quotaCache.size });
     }
   } catch (err) {
-    console.warn('[Quota] Probe failed, using stale cache:', (err as Error).message);
+    logger.warn('quota_probe_failed', { error: (err as Error).message });
   }
 
   return quotaCache;

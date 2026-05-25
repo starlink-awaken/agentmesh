@@ -1,0 +1,84 @@
+{
+  "test": "code-generator-performance",
+  "timestamp": 1779620953608,
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v24.3.0",
+    "cpuCount": 18,
+    "totalMemory": "66MB",
+    "timestamp": "2026-05-24T11:09:13.608Z"
+  },
+  "results": [
+    {
+      "sample": "simple-agent",
+      "result": {
+        "timeMs": 0.007417000000714324,
+        "linesOfCode": 20
+      }
+    },
+    {
+      "sample": "minimal-agent",
+      "result": {
+        "timeMs": 0.005499999999301508,
+        "linesOfCode": 20
+      }
+    },
+    {
+      "sample": "data-processor",
+      "result": {
+        "timeMs": 0.023166999999375548,
+        "linesOfCode": 25
+      }
+    },
+    {
+      "sample": "transform-agent",
+      "result": {
+        "timeMs": 0.009833000000071479,
+        "linesOfCode": 0
+      }
+    },
+    {
+      "sample": "conditional-router",
+      "result": {
+        "timeMs": 0.019458000000668108,
+        "linesOfCode": 0
+      }
+    },
+    {
+      "sample": "resilient-processor",
+      "result": {
+        "timeMs": 0.019790999998804182,
+        "linesOfCode": 0
+      }
+    },
+    {
+      "sample": "enterprise-workflow",
+      "result": {
+        "timeMs": 0.04325000000062573,
+        "linesOfCode": 27
+      }
+    },
+    {
+      "sample": "multi-domain-orchestrator",
+      "result": {
+        "timeMs": 0.02754099999947357,
+        "linesOfCode": 37
+      }
+    },
+    {
+      "sample": "parallel-processor",
+      "result": {
+        "timeMs": 0.03208399999857647,
+        "linesOfCode": 23
+      }
+    },
+    {
+      "sample": "batch-processor",
+      "result": {
+        "timeMs": 0.011250000001382432,
+        "linesOfCode": 23
+      }
+    }
+  ]
+}

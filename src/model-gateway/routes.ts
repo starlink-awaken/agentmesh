@@ -6,6 +6,7 @@ import { circuitBreakerRegistry } from './circuit-breaker.js';
 import { checkAllProviders } from './health.js';
 import { getMetrics, recordRequest } from './metrics.js';
 import { checkRateLimit } from './rate-limit.js';
+import { logger } from '../core/logger.js';
 
 function logReq(originalModel: string, providerName: string, actualModel: string, reqStart: number, status: number, streaming: boolean, error?: string) {
   recordRequest({
@@ -79,7 +80,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
 
     const model = remapModel(originalModel, provider.name);
     const reqStart = Date.now();
-    console.log(`[ModelGW] ${originalModel} → ${provider.name}/${model} (${body.stream ? 'stream' : 'sync'})`);
+    logger.info('model_gateway_request', { originalModel, provider: provider.name, model, stream: !!body.stream });
 
     try {
       const upstreamResp = await callChatCompletions(provider, {
@@ -95,7 +96,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
       if (!upstreamResp.ok) {
         const errText = await upstreamResp.text();
         logReq(originalModel, provider.name, model, reqStart, upstreamResp.status, !!body.stream, errText.slice(0, 200));
-        console.error(`[ModelGW] ${provider.name} error ${upstreamResp.status}: ${errText.slice(0, 200)}`);
+        logger.error('model_gateway_upstream_error', { provider: provider.name, status: upstreamResp.status, error: errText.slice(0, 200) });
         return reply.code(upstreamResp.status).send({
           error: { message: `${provider.name}: ${errText.slice(0, 500)}` },
         });
@@ -115,7 +116,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
       reply.send(data);
     } catch (err) {
       logReq(originalModel, provider.name, model, reqStart, 502, !!body.stream, (err as Error).message);
-      console.error(`[ModelGW] Error calling ${provider.name}:`, (err as Error).message);
+      logger.error('model_gateway_call_error', { provider: provider.name, error: (err as Error).message });
       reply.code(502).send({
         error: { message: `Provider error: ${(err as Error).message}` },
       });
@@ -146,7 +147,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
 
     const model = remapModel(originalModel, provider.name);
     body.model = model;
-    console.log(`[ModelGW:Responses] ${originalModel} → ${provider.name}/${model}`);
+    logger.info('model_gateway_responses_request', { originalModel, provider: provider.name, model });
 
     const reqStart = Date.now();
     try {
@@ -173,7 +174,7 @@ export async function modelGatewayRoutes(fastify: FastifyInstance) {
       reply.send(data);
     } catch (err) {
       logReq(originalModel, provider.name, model, reqStart, 502, !!body.stream, (err as Error).message);
-      console.error(`[ModelGW:Responses] Error:`, (err as Error).message);
+      logger.error('model_gateway_responses_error', { error: (err as Error).message });
       reply.code(502).send({
         error: { message: `Provider error: ${(err as Error).message}` },
       });

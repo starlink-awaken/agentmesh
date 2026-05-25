@@ -1,6 +1,7 @@
 import type { ModelGatewayConfig, ResolvedProvider } from './types.js';
 import { isProviderAvailable } from './quota.js';
 import { circuitBreakerRegistry } from './circuit-breaker.js';
+import { logger } from '../core/logger.js';
 
 // 模型名重映射：对外模型名 → 实际 Provider 的模型名（可从 config 覆盖）
 let modelAliases: Record<string, Record<string, string>> = {
@@ -47,26 +48,41 @@ export function getConfig(): ModelGatewayConfig {
 export function resolveProvider(model: string): ResolvedProvider | null {
   if (!config) return null;
 
+  const trace: string[] = [];
+
   // 1. 按 model_routing 配置查找
   const routingEntries = Object.entries(config.model_routing);
   for (const [pattern, providers] of routingEntries as [string, string[]][]) {
     if (model.startsWith(pattern)) {
       for (const providerName of providers) {
         const providerCfg = config.providers[providerName];
-        if (!providerCfg) continue;
+        if (!providerCfg) {
+          trace.push(`${providerName}: not configured`);
+          continue;
+        }
 
         const apiKey = resolveApiKey(providerName, providerCfg);
-        if (!apiKey) continue;
+        if (!apiKey) {
+          trace.push(`${providerName}: no API key`);
+          continue;
+        }
 
         // 熔断器检查：跳过 OPEN 状态的 Provider
-        if (circuitBreakerRegistry.isOpen(providerName)) continue;
+        if (circuitBreakerRegistry.isOpen(providerName)) {
+          trace.push(`${providerName}: circuit breaker OPEN`);
+          continue;
+        }
 
         // codex 和 openai 特殊处理：检查 Codex Plus 配额
         if (providerName === 'openai') {
           const codexAvailable = isProviderAvailable('codex');
-          if (!codexAvailable) continue; // Codex Plus 配额耗尽，跳过
+          if (!codexAvailable) {
+            trace.push(`${providerName}: Codex Plus quota exhausted`);
+            continue;
+          }
         }
 
+        logger.info('resolveProvider: routing match', { model, provider: providerName, pattern });
         return {
           name: providerName,
           base_url: providerCfg.base_url,
@@ -78,32 +94,57 @@ export function resolveProvider(model: string): ResolvedProvider | null {
   }
 
   // 2. 全局 fallback 链
-  for (const providerName of config.fallback_chain) {
-    const providerCfg = config.providers[providerName];
-    if (!providerCfg) continue;
+  if (config.fallback_chain?.length) {
+    const skipped = trace.filter(t => !t.startsWith('routing'));
+    logger.warn('resolveProvider: routing failed, trying fallback chain', {
+      model,
+      fallback_chain: config.fallback_chain,
+      skipped_reasons: skipped,
+    });
+    for (const providerName of config.fallback_chain) {
+      const providerCfg = config.providers[providerName];
+      if (!providerCfg) {
+        trace.push(`${providerName}: not configured`);
+        continue;
+      }
 
-    const apiKey = resolveApiKey(providerName, providerCfg);
-    if (!apiKey) continue;
+      const apiKey = resolveApiKey(providerName, providerCfg);
+      if (!apiKey) {
+        trace.push(`${providerName}: no API key`);
+        continue;
+      }
 
-    // 熔断器检查：跳过 OPEN 状态的 Provider
-    if (circuitBreakerRegistry.isOpen(providerName)) continue;
+      // 熔断器检查：跳过 OPEN 状态的 Provider
+      if (circuitBreakerRegistry.isOpen(providerName)) {
+        trace.push(`${providerName}: circuit breaker OPEN`);
+        continue;
+      }
 
-    return {
-      name: providerName,
-      base_url: providerCfg.base_url,
-      api_key: apiKey,
-    };
-  }
-
-  // 3. 终极兜底：第一个有 API Key 的 Provider（也检查熔断器）
-  for (const [name, cfg] of Object.entries(config.providers)) {
-    if (circuitBreakerRegistry.isOpen(name)) continue;
-    const key = resolveApiKey(name, cfg);
-    if (key) {
-      return { name, base_url: cfg.base_url, api_key: key };
+      logger.info('resolveProvider: fallback selected', { model, provider: providerName });
+      return {
+        name: providerName,
+        base_url: providerCfg.base_url,
+        api_key: apiKey,
+      };
     }
   }
 
+  // 3. 终极兜底：第一个有 API Key 的 Provider（也检查熔断器）
+  logger.warn('resolveProvider: fallback chain exhausted, scanning all providers', { model });
+  for (const [name, cfg] of Object.entries(config.providers)) {
+    if (circuitBreakerRegistry.isOpen(name)) {
+      trace.push(`${name}: circuit breaker OPEN`);
+      continue;
+    }
+    const key = resolveApiKey(name, cfg);
+    if (key) {
+      logger.info('resolveProvider: last-resort selected', { model, provider: name });
+      return { name, base_url: cfg.base_url, api_key: key };
+    }
+    trace.push(`${name}: no API key`);
+  }
+
+  logger.error('resolveProvider: all providers failed', { model, trace: trace.join('; ') });
   return null;
 }
 

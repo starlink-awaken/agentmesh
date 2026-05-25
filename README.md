@@ -130,8 +130,8 @@ AgentMesh v2:    7 packages monorepo | 144 tests | 113K source lines | 0 compile
 ├── core-types:         5 files | zero-dependency type package
 ├── model-orchestrator: 12 files | 6 Providers | dynamic scheduler | circuit breaker | retry
 ├── gateway:            37 files | 9 tests | Fastify HTTP gateway | 45+ routes
-├── engine:             93 files | 92 tests | Honeycomb orchestration
-├── toolkit:            156 files | 41 tests | Capability SDK
+├── engine:             93 files | 92 tests | Honeycomb orchestration (@experimental — API in flux, integration tests plateaued)
+├── toolkit:            156 files | 41 tests | Capability SDK (@experimental — MCP client bridge pending, ChromaDB adapter degraded)
 ├── server:             2 files | MCP (11 tools)
 └── cli:                1 file | Unified CLI
 ```

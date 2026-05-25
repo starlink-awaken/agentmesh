@@ -1,6 +1,7 @@
 import type { ChatCompletionRequest, ResolvedProvider } from './types.js';
 import { circuitBreakerRegistry } from './circuit-breaker.js';
 import { withRetry, isRetryable } from './retry.js';
+import { logger } from '../core/logger.js';
 
 export async function callChatCompletions(
   provider: ResolvedProvider,
@@ -39,7 +40,7 @@ export async function callChatCompletions(
       });
       return r;
     }, (attempt, status, delayMs) => {
-      console.warn(`[Retry] ${providerName} attempt ${attempt} after ${status} — retrying in ${delayMs}ms`);
+      logger.warn('retry', { provider: providerName, attempt, status, delayMs });
     });
 
     if (!resp.ok && isRetryable(resp.status)) {
