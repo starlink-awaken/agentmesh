@@ -73,6 +73,9 @@ export type {
   TraceConfig,
   TraceRecord,
   TimeoutError,
+} from './tracing.js';
+
+export {
   createTraceContext,
   createEntrySpan,
   createInternalSpan,

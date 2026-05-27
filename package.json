@@ -10,7 +10,7 @@
     "__e2e__"
   ],
   "scripts": {
-    "build": "npm -ws run build",
+    "build": "npm -ws --if-present run build",
     "build:order": "cd packages/core-types && bun run build && cd ../toolkit && bun run build && cd ../model-orchestrator && bun run build && cd ../gateway && bun run build",
     "start": "bun run apps/server/src/launcher.ts",
     "test": "npm -ws run test",
